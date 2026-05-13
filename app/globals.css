@@ -2,26 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #F9FAFB;
+  color: #111827;
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .btn-primary {
+    @apply bg-blue-600 text-white font-semibold rounded-xl px-6 py-3 min-h-[44px] w-full
+           hover:bg-blue-700 active:bg-blue-800 transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-blue-600 font-semibold rounded-xl px-6 py-3 min-h-[44px] w-full
+           border-2 border-blue-600 hover:bg-blue-50 active:bg-blue-100 transition-colors duration-150;
+  }
+
+  .btn-option {
+    @apply border-2 border-gray-200 rounded-xl px-4 py-3 min-h-[44px] font-medium
+           hover:border-blue-400 hover:bg-blue-50 active:bg-blue-100 transition-all duration-150
+           cursor-pointer text-center;
+  }
+
+  .btn-option-selected {
+    @apply border-blue-600 bg-blue-600 text-white;
+  }
+
+  .input-field {
+    @apply w-full border-2 border-gray-200 rounded-xl px-4 py-3 min-h-[44px]
+           focus:border-blue-600 focus:outline-none focus:ring-0 transition-colors duration-150
+           text-base;
   }
 }
