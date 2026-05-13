@@ -133,7 +133,7 @@ export default function BookingForm({ restaurant }: Props) {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      {!isGroupFlow && <ProgressBar step={step} totalSteps={3} />}
+      {!isGroupFlow && <ProgressBar step={step} totalSteps={3} primaryColor={restaurant.primary_color || '#2563EB'} />}
 
       <div className="p-6">
         {error && (

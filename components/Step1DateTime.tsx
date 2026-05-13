@@ -72,6 +72,7 @@ export default function Step1DateTime({ restaurant, initialDate, initialTime, in
           schedule={restaurant.schedule}
           selectedDate={selectedDate}
           onSelect={handleDateSelect}
+          primaryColor={restaurant.primary_color || '#2563EB'}
         />
         {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date}</p>}
       </div>

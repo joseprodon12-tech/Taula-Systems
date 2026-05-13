@@ -7,6 +7,7 @@ interface Props {
   schedule: Record<string, { lunch?: string; dinner?: string } | null>
   selectedDate: Date | null
   onSelect: (date: Date) => void
+  primaryColor?: string
 }
 
 const MONTHS_CA = [
@@ -16,7 +17,7 @@ const MONTHS_CA = [
 
 const DAYS_CA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg']
 
-export default function CalendarPicker({ schedule, selectedDate, onSelect }: Props) {
+export default function CalendarPicker({ schedule, selectedDate, onSelect, primaryColor = '#2563EB' }: Props) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -30,7 +31,6 @@ export default function CalendarPicker({ schedule, selectedDate, onSelect }: Pro
   const month = viewDate.getMonth()
 
   const firstDay = new Date(year, month, 1)
-  // Convert Sunday=0 to Monday=0 for European calendar
   const startOffset = (firstDay.getDay() + 6) % 7
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
@@ -59,7 +59,6 @@ export default function CalendarPicker({ schedule, selectedDate, onSelect }: Pro
 
   return (
     <div className="border-2 border-gray-100 rounded-xl overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
         <button
           type="button"
@@ -85,7 +84,6 @@ export default function CalendarPicker({ schedule, selectedDate, onSelect }: Pro
         </button>
       </div>
 
-      {/* Day headers */}
       <div className="grid grid-cols-7 border-b border-gray-100">
         {DAYS_CA.map(d => (
           <div key={d} className="py-2 text-center text-xs font-semibold text-gray-400">
@@ -94,7 +92,6 @@ export default function CalendarPicker({ schedule, selectedDate, onSelect }: Pro
         ))}
       </div>
 
-      {/* Days grid */}
       <div className="grid grid-cols-7 p-2 gap-1">
         {Array.from({ length: startOffset }).map((_, i) => (
           <div key={`empty-${i}`} />
@@ -109,6 +106,13 @@ export default function CalendarPicker({ schedule, selectedDate, onSelect }: Pro
           const isToday = isSameDay(date, today)
           const isDisabled = isPast || isClosed
 
+          let inlineStyle: React.CSSProperties = {}
+          if (isSelected) {
+            inlineStyle = { backgroundColor: primaryColor, color: 'white', fontWeight: 'bold' }
+          } else if (isToday) {
+            inlineStyle = { border: `2px solid ${primaryColor}`, color: primaryColor }
+          }
+
           return (
             <button
               key={day}
@@ -118,10 +122,9 @@ export default function CalendarPicker({ schedule, selectedDate, onSelect }: Pro
               className={`
                 aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all
                 ${isDisabled ? 'text-gray-300 cursor-not-allowed' : 'cursor-pointer'}
-                ${isSelected ? 'bg-blue-600 text-white font-bold' : ''}
-                ${!isSelected && !isDisabled ? 'hover:bg-blue-50 hover:text-blue-700' : ''}
-                ${isToday && !isSelected ? 'border-2 border-blue-300 text-blue-600' : ''}
+                ${!isSelected && !isDisabled ? 'hover:bg-gray-100' : ''}
               `}
+              style={inlineStyle}
             >
               {day}
             </button>

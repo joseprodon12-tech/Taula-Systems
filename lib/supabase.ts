@@ -21,6 +21,11 @@ export type Restaurant = {
   max_capacity: number
   group_threshold: number
   whatsapp_number: string
+  primary_color: string
+  logo_url: string | null
+  welcome_message: string | null
+  address: string | null
+  city: string | null
   created_at: string
 }
 
