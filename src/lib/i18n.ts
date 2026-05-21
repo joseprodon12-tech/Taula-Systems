@@ -1,0 +1,330 @@
+export type Locale = 'ca' | 'es'
+type DeepString<T> = { [K in keyof T]: T[K] extends object ? DeepString<T[K]> : string }
+
+const ca = {
+  nav: {
+    avui:   'Avui',
+    agenda: 'Agenda',
+    config: 'Configuració',
+    nova:   'Nova reserva',
+  },
+  common: {
+    avui:      'Avui',
+    carregant: 'Carregant...',
+  },
+  reserva: {
+    nova:       'Nova reserva',
+    editar:     'Editar reserva',
+    guardar:    'Guardar reserva',
+    cancellar:  'Cancel·lar reserva',
+    tornar:     '← Tornar',
+    taulaLabel: 'Taula',
+    seccions: {
+      interior: 'Interior',
+      terrassa: 'Terrassa',
+    },
+    camps: {
+      data:             'Data',
+      hora:             "Hora d'entrada",
+      horaSortida:      'Hora de sortida',
+      persones:         'Persones',
+      seccio:           'Secció',
+      nom:              'Nom del client',
+      telefon:          'Telèfon de contacte',
+      email:            'Email',
+      notes:            'Notes',
+      taula:            'Número de taula',
+      opcional:         '(opcional)',
+      notesPlaceholder: "Al·lèrgies, preferències de taula...",
+      taulaPlaceholder: 'Ex: T-3, Barra, Terrassa 2',
+    },
+    estats: {
+      pending:   'Pendent',
+      arrived:   'Ha vingut',
+      no_show:   'No-show',
+      cancelled: 'Cancel·lada',
+    },
+    accions: {
+      canviarEstat:  'CANVIAR ESTAT',
+      editar:        'Editar →',
+      marcarPendent: 'Marcar pendent',
+    },
+    missatges: {
+      tancat:       'El restaurant és tancat aquest dia',
+      capacitat:    'places ocupades — reserva guardada igualment',
+      guardada:     'Reserva guardada',
+      actualitzada: 'Reserva actualitzada',
+      cancellada:   'Reserva cancel·lada',
+      errorGeneric: 'Hi ha hagut un error. Torna-ho a provar.',
+    },
+    avisos: {
+      taulaCapPre:   'Aquesta taula és de',
+      grupEsDe:      'El grup és de',
+      taulesHiCaben: 'Taules que hi caben:',
+    },
+    confirmCancellar: {
+      titol:     'Cancel·lar reserva',
+      missatge:  'Segur que vols cancel·lar la reserva de',
+      confirmar: 'Sí, cancel·la',
+      mantenir:  'Mantenir reserva',
+    },
+  },
+  avui: {
+    titol:       'Avui',
+    avuiLabel:   'Avui',
+    dema:        'Demà',
+    ahir:        'Ahir',
+    anteriorDia: 'Dia anterior',
+    seguent:     'Dia següent',
+    calendari:   'CALENDARI',
+    capacitat:   'Capacitat total',
+    ocupat:      'Avui ocupat',
+    reserva:     'reserva',
+    reserves:    'reserves',
+    persona:     'persona',
+    persones:    'persones',
+    pDinar:      'p dinar',
+    pSopar:      'p sopar',
+    dinar:       'Dinar',
+    sopar:       'Sopar',
+    sense:       'Sense reserves',
+    senseSub:    'Toca el + per afegir la primera reserva del dia.',
+    vistes: {
+      llista: 'Llista',
+      gantt:  'Gantt',
+    },
+  },
+  agenda: {
+    setmanaAnterior: 'Setmana anterior',
+    setmanaSeguent:  'Setmana següent',
+  },
+  gantt: {
+    taulaBuida:  'Taula lliure',
+    senseTaules: 'No hi ha taules configurades.',
+    configLink:  'Afegeix-les a la configuració',
+  },
+  config: {
+    titol:  'Configuració',
+    idioma: 'Idioma',
+    idiomes: {
+      ca: 'Català',
+      es: 'Castellano',
+    },
+    seccions: {
+      restaurant: 'Restaurant',
+      horaris:    'Horaris',
+      capacitat:  'Capacitat',
+      tancats:    'Dies tancats',
+    },
+    info: {
+      nom:     'Nom del local',
+      telefon: 'Telèfon',
+      adreca:  'Adreça',
+      url:     'URL formulari',
+    },
+    horaris: {
+      obertDia: 'Obert aquest dia',
+      obert:    'Obert',
+      tancat:   'Tancat',
+      fins:     'fins',
+    },
+    tancats: {
+      motiu: 'Motiu (opcional)',
+    },
+    durades: {
+      titol:      'Durada de les reserves',
+      dinar:      'Dinar',
+      sopar:      'Sopar',
+      unitat:     'min',
+      descripcio: 'Temps que ocupa una taula per defecte. Es pot canviar per a cada reserva individual.',
+    },
+    taules: {
+      titol:           'Les teves taules',
+      afegir:          'Afegir taula',
+      editar:          'Editar',
+      eliminar:        'Eliminar',
+      sala:            'Sala',
+      terrassa:        'Terrassa',
+      places:          'places',
+      errorReserves:   'Té reserves futures, no es pot eliminar',
+      numeroNom:       'Número / Nom',
+      seccioLabel:     'Secció',
+      capacitatLabel:  'Capacitat',
+      eliminarConfirm: 'Segur que vols eliminar aquesta taula? Aquesta acció no es pot desfer.',
+    },
+  },
+} as const
+
+const es: DeepString<typeof ca> = {
+  nav: {
+    avui:   'Hoy',
+    agenda: 'Agenda',
+    config: 'Configuración',
+    nova:   'Nueva reserva',
+  },
+  common: {
+    avui:      'Hoy',
+    carregant: 'Cargando...',
+  },
+  reserva: {
+    nova:       'Nueva reserva',
+    editar:     'Editar reserva',
+    guardar:    'Guardar reserva',
+    cancellar:  'Cancelar reserva',
+    tornar:     '← Volver',
+    taulaLabel: 'Mesa',
+    seccions: {
+      interior: 'Interior',
+      terrassa: 'Terraza',
+    },
+    camps: {
+      data:             'Fecha',
+      hora:             'Hora de entrada',
+      horaSortida:      'Hora de salida',
+      persones:         'Personas',
+      seccio:           'Sección',
+      nom:              'Nombre del cliente',
+      telefon:          'Teléfono de contacto',
+      email:            'Email',
+      notes:            'Notas',
+      taula:            'Núm. de mesa',
+      opcional:         '(opcional)',
+      notesPlaceholder: 'Alergias, preferencias de mesa...',
+      taulaPlaceholder: 'Ej: M-3, Barra, Terraza 2',
+    },
+    estats: {
+      pending:   'Pendiente',
+      arrived:   'Ha llegado',
+      no_show:   'No-show',
+      cancelled: 'Cancelada',
+    },
+    accions: {
+      canviarEstat:  'CAMBIAR ESTADO',
+      editar:        'Editar →',
+      marcarPendent: 'Marcar pendiente',
+    },
+    missatges: {
+      tancat:       'El restaurante está cerrado este día',
+      capacitat:    'plazas ocupadas — reserva guardada igualmente',
+      guardada:     'Reserva guardada',
+      actualitzada: 'Reserva actualizada',
+      cancellada:   'Reserva cancelada',
+      errorGeneric: 'Ha habido un error. Inténtalo de nuevo.',
+    },
+    avisos: {
+      taulaCapPre:   'Esta mesa es de',
+      grupEsDe:      'El grupo es de',
+      taulesHiCaben: 'Mesas que caben:',
+    },
+    confirmCancellar: {
+      titol:     'Cancelar reserva',
+      missatge:  'Seguro que quieres cancelar la reserva de',
+      confirmar: 'Sí, cancela',
+      mantenir:  'Mantener reserva',
+    },
+  },
+  avui: {
+    titol:       'Hoy',
+    avuiLabel:   'Hoy',
+    dema:        'Mañana',
+    ahir:        'Ayer',
+    anteriorDia: 'Día anterior',
+    seguent:     'Día siguiente',
+    calendari:   'CALENDARIO',
+    capacitat:   'Capacidad total',
+    ocupat:      'Hoy ocupado',
+    reserva:     'reserva',
+    reserves:    'reservas',
+    persona:     'persona',
+    persones:    'personas',
+    pDinar:      'p comida',
+    pSopar:      'p cena',
+    dinar:       'Comida',
+    sopar:       'Cena',
+    sense:       'Sin reservas',
+    senseSub:    'Pulsa el + para añadir la primera reserva del día.',
+    vistes: {
+      llista: 'Lista',
+      gantt:  'Gantt',
+    },
+  },
+  agenda: {
+    setmanaAnterior: 'Semana anterior',
+    setmanaSeguent:  'Semana siguiente',
+  },
+  gantt: {
+    taulaBuida:  'Mesa libre',
+    senseTaules: 'No hay mesas configuradas.',
+    configLink:  'Añádelas en la configuración',
+  },
+  config: {
+    titol:  'Configuración',
+    idioma: 'Idioma',
+    idiomes: {
+      ca: 'Català',
+      es: 'Castellano',
+    },
+    seccions: {
+      restaurant: 'Restaurante',
+      horaris:    'Horarios',
+      capacitat:  'Capacidad',
+      tancats:    'Días cerrados',
+    },
+    info: {
+      nom:     'Nombre del local',
+      telefon: 'Teléfono',
+      adreca:  'Dirección',
+      url:     'URL formulario',
+    },
+    horaris: {
+      obertDia: 'Abierto este día',
+      obert:    'Abierto',
+      tancat:   'Cerrado',
+      fins:     'hasta',
+    },
+    tancats: {
+      motiu: 'Motivo (opcional)',
+    },
+    durades: {
+      titol:      'Duración de las reservas',
+      dinar:      'Comida',
+      sopar:      'Cena',
+      unitat:     'min',
+      descripcio: 'Tiempo que ocupa una mesa por defecto. Se puede cambiar para cada reserva individual.',
+    },
+    taules: {
+      titol:           'Tus mesas',
+      afegir:          'Añadir mesa',
+      editar:          'Editar',
+      eliminar:        'Eliminar',
+      sala:            'Sala',
+      terrassa:        'Terraza',
+      places:          'plazas',
+      errorReserves:   'Tiene reservas futuras, no se puede eliminar',
+      numeroNom:       'Número / Nombre',
+      seccioLabel:     'Sección',
+      capacitatLabel:  'Capacidad',
+      eliminarConfirm: '¿Seguro que quieres eliminar esta mesa? Esta acción no se puede deshacer.',
+    },
+  },
+}
+
+export const translations = { ca, es }
+
+type TranslationKeys = typeof ca
+type DotPath<T, Prefix extends string = ''> = {
+  [K in keyof T]: T[K] extends object
+    ? DotPath<T[K], `${Prefix}${K & string}.`>
+    : `${Prefix}${K & string}`
+}[keyof T]
+
+export type TKey = DotPath<TranslationKeys>
+
+export function getT(locale: Locale) {
+  return function t(key: TKey): string {
+    const keys = key.split('.')
+    let value: unknown = translations[locale]
+    for (const k of keys) value = (value as Record<string, unknown>)[k]
+    return (value as string) ?? key
+  }
+}
