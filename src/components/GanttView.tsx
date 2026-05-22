@@ -279,7 +279,7 @@ export default function GanttView({
         }} />
         <div style={{ position: 'relative', width: contentW, height: HEADER_H, flexShrink: 0 }}>
           {hourMarkers.map(m => (
-            <span key={m.label} style={{
+            <span key={m.x} style={{
               position: 'absolute', left: m.x, top: '50%',
               transform: 'translate(-50%,-50%)',
               fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap',
@@ -379,21 +379,21 @@ export default function GanttView({
                     if (time) onSlotClick(tbl.id, time)
                   }}
                 >
-                  {/* Hour lines */}
-                  {hourMarkers.map(m => (
-                    <div key={m.label} style={{
-                      position: 'absolute', left: m.x, top: 0, bottom: 0,
-                      width: 1, background: 'var(--border)', pointerEvents: 'none',
-                    }} />
-                  ))}
-
-                  {/* Gap hatching */}
+                  {/* Gap hatching — z-index 0 so it stays below hour lines */}
                   {segs.slice(0, -1).map((s, i) => (
                     <div key={i} style={{
-                      position: 'absolute', pointerEvents: 'none',
+                      position: 'absolute', pointerEvents: 'none', zIndex: 0,
                       left: s.offsetPx + (s.endMin - s.startMin) * PX_PER_MIN,
                       width: GAP_PX, top: 0, bottom: 0,
                       background: 'repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 6px)',
+                    }} />
+                  ))}
+
+                  {/* Hour lines — z-index 1 so they render above gap hatching */}
+                  {hourMarkers.map(m => (
+                    <div key={m.x} style={{
+                      position: 'absolute', left: m.x, top: 0, bottom: 0,
+                      width: 1, background: 'var(--border)', pointerEvents: 'none', zIndex: 1,
                     }} />
                   ))}
 
@@ -408,6 +408,7 @@ export default function GanttView({
                         key={r.id}
                         title={`${r.customer_name} · ×${r.party_size} · ${r.time}`}
                         onPointerDown={e => startDrag(e, r, tbl.id)}
+                        onClick={e => e.stopPropagation()}
                         style={{
                           position: 'absolute', left: x + 2, top: 6, width: w, height: ROW_H - 12,
                           background: STATUS_BG[r.status] ?? STATUS_BG.pending,
@@ -420,7 +421,9 @@ export default function GanttView({
                           border: r.status === 'standby' ? '1.5px solid #D97706' : 'none',
                           touchAction: 'none',
                           userSelect: 'none',
-                        }}
+                          WebkitUserSelect: 'none',
+                          WebkitTouchCallout: 'none',
+                        } as React.CSSProperties}
                       >
                         <span style={{
                           fontSize: 11, fontWeight: 600,
