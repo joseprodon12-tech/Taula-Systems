@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment } from 'react'
+import React, { Fragment, useRef, useState, useEffect } from 'react'
 import type { Table, Reservation } from '@/db/schema'
 import { useT } from '@/context/LocaleContext'
 
@@ -13,6 +13,7 @@ const TABLE_COL_W = 88
 const ROW_H      = 52
 const HEADER_H   = 36
 const SEC_H      = 26   // section label row height
+const DRAG_THRESHOLD = 6
 
 // ── Time helpers ───────────────────────────────────────────────────────────────
 function toMin(t: string): number {
@@ -69,15 +70,23 @@ function xToTime(x: number, segs: Seg[]): string | null {
   return null
 }
 
-// ── Greedy distribution ────────────────────────────────────────────────────────
+// ── Greedy distribution (honors table_number when set) ────────────────────────
 function distribute(tables: Table[], reservations: Reservation[]): Map<string, Reservation[]> {
   const result = new Map<string, Reservation[]>(tables.map(t => [t.id, []]))
+  const tableByNumber = new Map(tables.map(t => [t.number, t.id]))
 
   const sorted = [...reservations]
     .filter(r => r.status !== 'cancelled')
     .sort((a, b) => a.time.localeCompare(b.time))
 
   for (const r of sorted) {
+    if (r.table_number) {
+      const tid = tableByNumber.get(r.table_number)
+      if (tid && result.has(tid)) {
+        result.get(tid)!.push(r)
+        continue
+      }
+    }
     const candidates = tables.filter(t => t.section === r.section)
     let placed = false
     for (const t of candidates) {
@@ -111,15 +120,24 @@ interface Props {
   dinnerHours: [string, string] | null
   onSlotClick: (tableId: string, time: string) => void
   onReservationClick: (id: string) => void
+  onReservationMove?: (reservationId: string, newTableId: string, newTime: string) => Promise<void>
 }
 
 export default function GanttView({
-  tables, reservations, lunchHours, dinnerHours, onSlotClick, onReservationClick,
+  tables, reservations, lunchHours, dinnerHours, onSlotClick, onReservationClick, onReservationMove,
 }: Props) {
   const { t } = useT()
   const segs     = buildSegs(lunchHours, dinnerHours)
   const contentW = totalWidth(segs)
-  const byTable  = distribute(tables, reservations)
+
+  const [localReservations, setLocalReservations] = useState(reservations)
+  useEffect(() => { setLocalReservations(reservations) }, [reservations])
+
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [ghost, setGhost] = useState<{ tableId: string; time: string; reservationId: string } | null>(null)
+
+  const byTable = distribute(tables, localReservations)
 
   if (!segs.length) return (
     <p style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -143,18 +161,114 @@ export default function GanttView({
       hourMarkers.push({ label: toTime(m), x: s.offsetPx + (m - s.startMin) * PX_PER_MIN })
   }
 
-  const indoorTables  = tables.filter(t => t.section === 'indoor')
-  const outdoorTables = tables.filter(t => t.section === 'outdoor')
+  const indoorTables  = tables.filter(tbl => tbl.section === 'indoor')
+  const outdoorTables = tables.filter(tbl => tbl.section === 'outdoor')
   const hasBoth = indoorTables.length > 0 && outdoorTables.length > 0
 
   const groups: { label: string; tables: Table[] }[] = []
   if (indoorTables.length)  groups.push({ label: t('config.taules.sala'),     tables: indoorTables })
   if (outdoorTables.length) groups.push({ label: t('config.taules.terrassa'), tables: outdoorTables })
 
+  // Build Y positions for each table row (used for vertical hit-testing during drag)
+  const tableRows: { id: string; yStart: number; yEnd: number }[] = []
+  let rowY = HEADER_H
+  for (const group of groups) {
+    if (hasBoth) rowY += SEC_H
+    for (const tbl of group.tables) {
+      tableRows.push({ id: tbl.id, yStart: rowY, yEnd: rowY + ROW_H })
+      rowY += ROW_H
+    }
+  }
+
+  function getDropPos(clientX: number, clientY: number) {
+    const container = containerRef.current
+    if (!container) return null
+    const rect = container.getBoundingClientRect()
+    const x = clientX - rect.left - TABLE_COL_W + container.scrollLeft
+    const y = clientY - rect.top
+    const time = xToTime(x, segs)
+    const tRow = tableRows.find(tr => y >= tr.yStart && y < tr.yEnd)
+    return time && tRow ? { time, tableId: tRow.id } : null
+  }
+
+  function startDrag(e: React.PointerEvent<HTMLDivElement>, r: Reservation, tableId: string) {
+    if (!onReservationMove) return
+    e.preventDefault()
+    e.stopPropagation()
+
+    // Route all pointer events to the container so the drag can't escape
+    containerRef.current?.setPointerCapture(e.pointerId)
+
+    const startX = e.clientX
+    const startY = e.clientY
+    let active = false
+
+    function onMove(ev: PointerEvent) {
+      if (!active) {
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD) return
+        active = true
+        setDraggingId(r.id)
+        // Disable container scroll so the browser doesn't hijack touch gestures
+        if (containerRef.current) containerRef.current.style.touchAction = 'none'
+      }
+      const pos = getDropPos(ev.clientX, ev.clientY)
+      if (pos) setGhost({ ...pos, reservationId: r.id })
+    }
+
+    function onUp(ev: PointerEvent) {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      containerRef.current?.releasePointerCapture(ev.pointerId)
+      if (containerRef.current) containerRef.current.style.touchAction = ''
+      setDraggingId(null)
+      setGhost(null)
+
+      if (!active) {
+        onReservationClick(r.id)
+        return
+      }
+
+      const pos = getDropPos(ev.clientX, ev.clientY)
+      if (!pos || (pos.time === r.time && pos.tableId === tableId)) return
+
+      // Reject if target slot overlaps an existing reservation in that table
+      const targetRows = byTable.get(pos.tableId) ?? []
+      const rStart = toMin(pos.time)
+      const rEnd = rStart + r.duration_minutes
+      const conflict = targetRows.some(e => {
+        if (e.id === r.id) return false
+        const eStart = toMin(e.time), eEnd = eStart + e.duration_minutes
+        return rStart < eEnd && rEnd > eStart
+      })
+      if (conflict) return
+
+      const targetTable = tables.find(tbl => tbl.id === pos.tableId)
+      if (!targetTable) return
+
+      // Optimistic update
+      setLocalReservations(prev => prev.map(res =>
+        res.id === r.id
+          ? { ...res, time: pos.time, section: targetTable.section, table_number: targetTable.number }
+          : res
+      ))
+
+      onReservationMove!(r.id, pos.tableId, pos.time).catch(() => {
+        setLocalReservations(prev => prev.map(res =>
+          res.id === r.id
+            ? { ...res, time: r.time, section: r.section, table_number: r.table_number }
+            : res
+        ))
+      })
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
   let globalRowIdx = 0
 
   return (
-    <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 12 }}>
+    <div ref={containerRef} style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 12 }}>
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', background: 'var(--surface)' }}>
@@ -212,12 +326,33 @@ export default function GanttView({
           )}
 
           {/* Table rows */}
-          {group.tables.map((t) => {
-            const isLast = groupIdx === groups.length - 1 && t.id === group.tables.at(-1)!.id
+          {group.tables.map((tbl) => {
+            const isLast = groupIdx === groups.length - 1 && tbl.id === group.tables.at(-1)!.id
             const rowBg  = globalRowIdx++ % 2 === 1 ? 'rgba(0,0,0,0.013)' : 'transparent'
 
+            let ghostEl: React.ReactNode = null
+            if (ghost?.tableId === tbl.id) {
+              const gx = timeToX(ghost.time, segs)
+              const ghostRes = gx !== null ? localReservations.find(res => res.id === ghost.reservationId) : null
+              if (gx !== null && ghostRes) {
+                const gw = Math.max(Math.min(ghostRes.duration_minutes * PX_PER_MIN, contentW - gx) - 4, 8)
+                ghostEl = (
+                  <div
+                    key="ghost"
+                    style={{
+                      position: 'absolute', left: gx + 2, top: 6, width: gw, height: ROW_H - 12,
+                      border: `2px dashed ${STATUS_BG[ghostRes.status] ?? STATUS_BG.pending}`,
+                      borderRadius: 6,
+                      pointerEvents: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                )
+              }
+            }
+
             return (
-              <div key={t.id} style={{
+              <div key={tbl.id} style={{
                 display: 'flex',
                 borderBottom: isLast ? 'none' : '1px solid var(--border)',
               }}>
@@ -228,8 +363,8 @@ export default function GanttView({
                   background: 'var(--bg)', borderRight: '1px solid var(--border)',
                   display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingLeft: 12,
                 }}>
-                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{t.number}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t.capacity}p</span>
+                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{tbl.number}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tbl.capacity}p</span>
                 </div>
 
                 {/* Time area */}
@@ -241,7 +376,7 @@ export default function GanttView({
                   onClick={e => {
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                     const time = xToTime(e.clientX - rect.left, segs)
-                    if (time) onSlotClick(t.id, time)
+                    if (time) onSlotClick(tbl.id, time)
                   }}
                 >
                   {/* Hour lines */}
@@ -263,23 +398,28 @@ export default function GanttView({
                   ))}
 
                   {/* Reservation blocks */}
-                  {(byTable.get(t.id) ?? []).map(r => {
+                  {(byTable.get(tbl.id) ?? []).map(r => {
                     const x = timeToX(r.time, segs)
                     if (x === null) return null
                     const w = Math.max(Math.min(r.duration_minutes * PX_PER_MIN, contentW - x) - 4, 8)
+                    const isDragging = draggingId === r.id
                     return (
                       <div
                         key={r.id}
                         title={`${r.customer_name} · ×${r.party_size} · ${r.time}`}
-                        onClick={e => { e.stopPropagation(); onReservationClick(r.id) }}
+                        onPointerDown={e => startDrag(e, r, tbl.id)}
                         style={{
                           position: 'absolute', left: x + 2, top: 6, width: w, height: ROW_H - 12,
                           background: STATUS_BG[r.status] ?? STATUS_BG.pending,
-                          borderRadius: 6, cursor: 'pointer', overflow: 'hidden',
+                          borderRadius: 6,
+                          cursor: onReservationMove ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
+                          overflow: 'hidden',
                           padding: '3px 7px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                          opacity: r.status === 'no_show' ? 0.55 : 1,
+                          opacity: isDragging ? 0.4 : (r.status === 'no_show' ? 0.55 : 1),
                           boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
                           border: r.status === 'standby' ? '1.5px solid #D97706' : 'none',
+                          touchAction: 'none',
+                          userSelect: 'none',
                         }}
                       >
                         <span style={{
@@ -305,6 +445,9 @@ export default function GanttView({
                       </div>
                     )
                   })}
+
+                          {/* Ghost block — drop target preview */}
+                  {ghostEl}
                 </div>
               </div>
             )

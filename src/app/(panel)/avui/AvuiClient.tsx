@@ -7,6 +7,7 @@ import ReservationCard from '@/components/ReservationCard'
 import MiniCalendar from '@/components/MiniCalendar'
 import GanttView from '@/components/GanttView'
 import { Toast, useToast } from '@/components/ui/Toast'
+import { moveReservation } from '@/app/actions/reservations'
 import { getLunchHours, getDinnerHours } from '@/lib/schedule'
 import { useT } from '@/context/LocaleContext'
 import type { Reservation, Restaurant, Table } from '@/db/schema'
@@ -43,7 +44,12 @@ interface Props {
 export default function AvuiClient({ reserves, selectedDate, today, dots, restaurantCapacity, restaurant, tables }: Props) {
   const router = useRouter()
   const { t, locale } = useT()
-  const { toast, hide } = useToast()
+  const { toast, show, hide } = useToast()
+
+  async function handleReservationMove(id: string, tableId: string, time: string) {
+    const result = await moveReservation(id, tableId, time)
+    if ('error' in result) show(result.error, 'error')
+  }
 
   function formatDateHeader(iso: string): string {
     const il = locale === 'ca' ? 'ca' : 'es'
@@ -189,6 +195,7 @@ export default function AvuiClient({ reserves, selectedDate, today, dots, restau
               router.push(`/reserva/nova?data=${selectedDate}&hora=${time}&taula=${encodeURIComponent(tableId)}`)
             }
             onReservationClick={(id) => router.push(`/reserva/${id}`)}
+            onReservationMove={handleReservationMove}
           />
         )}
       </div>

@@ -234,6 +234,38 @@ export async function getReservationById(id: string): Promise<Reservation | null
   return data as Reservation
 }
 
+export async function moveReservation(
+  id: string,
+  tableId: string,
+  newTime: string,
+): Promise<{ ok: true } | { error: string }> {
+  const { supabase } = await getAuthRestaurant()
+
+  const { data: table, error: tableError } = await supabase
+    .from('tables')
+    .select('number, section')
+    .eq('id', tableId)
+    .single()
+
+  if (tableError || !table) return { error: 'Taula no trobada' }
+
+  const { error } = await supabase
+    .from('reservations')
+    .update({
+      time: newTime,
+      table_number: table.number,
+      section: table.section,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+
+  if (error) return { error: 'Error en moure la reserva' }
+
+  revalidatePath('/avui')
+  revalidatePath('/agenda')
+  return { ok: true }
+}
+
 export async function getOccupiedTableNumbers(
   restaurantId: string,
   date: string,
