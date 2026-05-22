@@ -53,11 +53,14 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
 
   // ── Restaurant info ──
   const [info, setInfo] = useState({
-    name:    restaurant.name ?? '',
-    phone:   restaurant.phone ?? '',
-    email:   restaurant.email ?? '',
-    address: restaurant.address ?? '',
-    slug:    restaurant.slug ?? '',
+    name:             restaurant.name ?? '',
+    phone:            restaurant.phone ?? '',
+    email:            restaurant.email ?? '',
+    address:          restaurant.address ?? '',
+    city:             restaurant.city ?? '',
+    slug:             restaurant.slug ?? '',
+    welcome_message:  restaurant.welcome_message ?? '',
+    whatsapp_number:  restaurant.whatsapp_number ?? '',
   })
   const [infoChanged, setInfoChanged] = useState(false)
 

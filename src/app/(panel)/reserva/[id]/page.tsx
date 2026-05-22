@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
-import { db } from '@/db'
 import { getOrCreateRestaurant } from '@/app/actions/config'
+import { getReservationById } from '@/app/actions/reservations'
 import { getTables } from '@/app/actions/tables'
 import ReservaDetallClient from './ReservaDetallClient'
 
@@ -11,7 +11,7 @@ interface Props {
 export default async function ReservaDetallPage({ params }: Props) {
   const { id } = await params
   const [reservation, restaurant] = await Promise.all([
-    db.query.reservations.findFirst({ where: (r, { eq }) => eq(r.id, id) }),
+    getReservationById(id),
     getOrCreateRestaurant(),
   ])
   if (!reservation) notFound()

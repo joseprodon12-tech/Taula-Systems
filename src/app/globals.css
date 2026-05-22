@@ -87,6 +87,7 @@ body {
 .badge-arrived  { background: #ECFDF5; color: var(--state-arrived); }
 .badge-noshow   { background: #FEF2F2; color: var(--state-noshow); }
 .badge-cancel   { background: #F5F3FF; color: var(--state-cancel); }
+.badge-standby  { background: #FEF9C3; color: #854D0E; }
 
 /* ── Misc ── */
 .label { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }

@@ -12,6 +12,7 @@ const STATUS_CSS: Record<string, string> = {
   arrived:   'badge-arrived',
   no_show:   'badge-noshow',
   cancelled: 'badge-cancel',
+  standby:   'badge-standby',
 }
 
 interface Props {

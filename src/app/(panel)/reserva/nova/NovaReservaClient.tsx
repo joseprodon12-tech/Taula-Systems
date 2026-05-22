@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Toast, useToast } from '@/components/ui/Toast'
 import TimeWheelPicker from '@/components/TimeWheelPicker'
 import DatePicker from '@/components/DatePicker'
-import { createReservation, updateReservation, getAvailableSlotsForDate } from '@/app/actions/reservations'
+import { createReservation, updateReservation, getAvailableSlotsForDate, getReservationsForDay } from '@/app/actions/reservations'
 import { useT } from '@/context/LocaleContext'
 import type { Restaurant, Reservation, Table } from '@/db/schema'
 
@@ -67,6 +67,9 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
   })
   // Free-text table number when no tables are configured
   const [tableText, setTableText] = useState(tables.length === 0 ? (edit?.table_number ?? '') : '')
+  const [dayReservations, setDayReservations] = useState<
+    { table_number: string | null; time: string; duration_minutes: number; id: string }[]
+  >([])
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const hasOutdoor = restaurant.capacity_outdoor > 0
@@ -76,8 +79,17 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
     setTime('')
     setSlotsLoading(true)
     startTransition(async () => {
-      const newSlots = await getAvailableSlotsForDate(newDate)
+      const [newSlots, dayRes] = await Promise.all([
+        getAvailableSlotsForDate(newDate),
+        getReservationsForDay(restaurant.id, newDate),
+      ])
       setSlots(newSlots)
+      setDayReservations(dayRes.map(r => ({
+        table_number: r.table_number,
+        time: r.time,
+        duration_minutes: r.duration_minutes,
+        id: r.id,
+      })))
       setSlotsLoading(false)
     })
   }
@@ -126,6 +138,25 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
       }
     })
   }
+
+  const occupiedTableNumbers = (() => {
+    if (!time || !durationMinutes) return new Set<string>()
+    const [rh, rm] = time.split(':').map(Number)
+    const rStart = rh * 60 + rm
+    const rEnd = rStart + durationMinutes
+    return new Set(
+      dayReservations
+        .filter(r => {
+          if (edit && r.id === edit.id) return false
+          if (!r.table_number) return false
+          const [oh, om] = r.time.split(':').map(Number)
+          const oStart = oh * 60 + om
+          const oEnd = oStart + (r.duration_minutes || 90)
+          return rStart < oEnd && rEnd > oStart
+        })
+        .map(r => r.table_number as string)
+    )
+  })()
 
   // Split slots into lunch / dinner groups
   const lunchSlots = slots.filter(s => parseInt(s) < 17)
@@ -382,19 +413,32 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                       {sec === 'indoor' ? t('reserva.seccions.interior') : t('reserva.seccions.terrassa')}
                     </p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {group.map(table => (
-                        <button
-                          key={table.id}
-                          type="button"
-                          className={`btn btn-sm ${tableId === table.id ? 'btn-primary' : 'btn-ghost'}`}
-                          onClick={() => setTableId(id => id === table.id ? '' : table.id)}
-                        >
-                          {table.number}
-                          <span style={{ color: tableId === table.id ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)', fontSize: 11, marginLeft: 4 }}>
-                            {table.capacity}p
-                          </span>
-                        </button>
-                      ))}
+                      {group.map(table => {
+                        const isOccupied = occupiedTableNumbers.has(table.number)
+                        const isSelected = tableId === table.id
+                        return (
+                          <button
+                            key={table.id}
+                            type="button"
+                            className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-ghost'}`}
+                            onClick={() => setTableId(id => id === table.id ? '' : table.id)}
+                            style={{ opacity: isOccupied && !isSelected ? 0.4 : 1, position: 'relative' }}
+                          >
+                            {table.number}
+                            <span style={{ color: isSelected ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)', fontSize: 11, marginLeft: 4 }}>
+                              {table.capacity}p
+                            </span>
+                            {isOccupied && !isSelected && (
+                              <span style={{
+                                position: 'absolute', top: -4, right: -4,
+                                width: 8, height: 8, borderRadius: '50%',
+                                background: 'var(--state-noshow)',
+                                border: '1.5px solid white',
+                              }} />
+                            )}
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 )

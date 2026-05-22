@@ -1,7 +1,6 @@
 import { getOrCreateRestaurant } from '@/app/actions/config'
-import { getAvailableSlotsForDate } from '@/app/actions/reservations'
+import { getAvailableSlotsForDate, getReservationById } from '@/app/actions/reservations'
 import { getTables } from '@/app/actions/tables'
-import { db } from '@/db'
 import NovaReservaClient from './NovaReservaClient'
 
 interface Props {
@@ -16,9 +15,7 @@ export default async function NovaReservaPage({ searchParams }: Props) {
   const restaurant = await getOrCreateRestaurant()
   const [slots, editReservation, tables] = await Promise.all([
     getAvailableSlotsForDate(initialDate),
-    editarId
-      ? db.query.reservations.findFirst({ where: (r, { eq }) => eq(r.id, editarId) })
-      : Promise.resolve(null),
+    editarId ? getReservationById(editarId) : Promise.resolve(null),
     getTables(restaurant.id),
   ])
 

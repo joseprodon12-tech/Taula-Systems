@@ -1,29 +1,48 @@
 'use server'
 
-import { db } from '@/db'
-import { reservations } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getAvailableSlots } from '@/lib/schedule'
-import type { Reservation } from '@/db/schema'
+import type { Reservation, Restaurant } from '@/db/schema'
+
+async function getAuthRestaurant() {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('No autenticat')
+
+  const { data: restaurant, error } = await supabase
+    .from('restaurants')
+    .select('*')
+    .eq('owner_id', user.id)
+    .single()
+
+  if (error) throw error
+  return { supabase, restaurant: restaurant as Restaurant }
+}
 
 export async function getReservationsForDay(restaurantId: string, date: string): Promise<Reservation[]> {
-  return db.query.reservations.findMany({
-    where: (r, { eq, and }) => and(
-      eq(r.restaurant_id, restaurantId),
-      eq(r.date, date),
-    ),
-    orderBy: (r, { asc }) => [asc(r.time), asc(r.created_at)],
-  })
+  const { supabase } = await getAuthRestaurant()
+  const { data, error } = await supabase
+    .from('reservations')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .eq('date', date)
+    .order('time')
+    .order('created_at')
+  if (error) throw error
+  return data as Reservation[]
 }
 
 export async function updateReservationStatus(
   id: string,
   status: 'pending' | 'arrived' | 'no_show' | 'cancelled',
 ) {
-  await db.update(reservations)
-    .set({ status, updated_at: new Date().toISOString() })
-    .where(eq(reservations.id, id))
+  const { supabase } = await getAuthRestaurant()
+  const { error } = await supabase
+    .from('reservations')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
   revalidatePath('/avui')
 }
 
@@ -32,36 +51,37 @@ export async function getReservationsForWeek(
   from: string,
   to: string,
 ): Promise<Record<string, Reservation[]>> {
-  const rows = await db.query.reservations.findMany({
-    where: (r, { and, eq, gte, lte }) => and(
-      eq(r.restaurant_id, restaurantId),
-      gte(r.date, from),
-      lte(r.date, to),
-    ),
-    orderBy: (r, { asc }) => [asc(r.date), asc(r.time)],
-  })
+  const { supabase } = await getAuthRestaurant()
+  const { data, error } = await supabase
+    .from('reservations')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .gte('date', from)
+    .lte('date', to)
+    .order('date')
+    .order('time')
+  if (error) throw error
+
   const map: Record<string, Reservation[]> = {}
-  for (const r of rows) {
+  for (const r of (data as Reservation[])) {
     if (!map[r.date]) map[r.date] = []
     map[r.date].push(r)
   }
   return map
 }
 
-// Returns per each date in range: { date, count, party_sum }
 export async function getCalendarDots(restaurantId: string, from: string, to: string) {
-  const rows = await db.query.reservations.findMany({
-    where: (r, { and, eq, gte, lte }) => and(
-      eq(r.restaurant_id, restaurantId),
-      gte(r.date, from),
-      lte(r.date, to),
-      // exclude cancelled from dot count
-    ),
-    columns: { date: true, party_size: true, status: true },
-  })
+  const { supabase } = await getAuthRestaurant()
+  const { data, error } = await supabase
+    .from('reservations')
+    .select('date, party_size, status')
+    .eq('restaurant_id', restaurantId)
+    .gte('date', from)
+    .lte('date', to)
+  if (error) throw error
 
   const map: Record<string, { count: number; pax: number }> = {}
-  for (const r of rows) {
+  for (const r of (data as Pick<Reservation, 'date' | 'party_size' | 'status'>[])) {
     if (r.status === 'cancelled') continue
     if (!map[r.date]) map[r.date] = { count: 0, pax: 0 }
     map[r.date].count++
@@ -71,14 +91,16 @@ export async function getCalendarDots(restaurantId: string, from: string, to: st
 }
 
 export async function getAvailableSlotsForDate(date: string): Promise<string[]> {
-  const restaurant = await db.query.restaurants.findFirst()
-  if (!restaurant) return []
+  const { supabase, restaurant } = await getAuthRestaurant()
 
-  const closure = await db.query.closures.findFirst({
-    where: (c, { and, eq }) => and(eq(c.restaurant_id, restaurant.id), eq(c.date, date)),
-  })
+  const { data: closure } = await supabase
+    .from('closures')
+    .select('id')
+    .eq('restaurant_id', restaurant.id)
+    .eq('date', date)
+    .maybeSingle()
+
   if (closure) return []
-
   return getAvailableSlots(restaurant.weekly_hours, date)
 }
 
@@ -101,20 +123,17 @@ export async function createReservation(data: {
   if (!data.time) fieldErrors.time = "L'hora és obligatòria"
   if (Object.keys(fieldErrors).length) return { error: 'Comprova els camps obligatoris', fieldErrors }
 
-  const restaurant = await db.query.restaurants.findFirst()
-  if (!restaurant) return { error: 'Restaurant no trobat' }
+  const { supabase, restaurant } = await getAuthRestaurant()
 
-  // Check capacity for warning (non-blocking)
-  const occupied = await db.query.reservations.findMany({
-    where: (r, { and, eq, inArray }) => and(
-      eq(r.restaurant_id, restaurant.id),
-      eq(r.date, data.date),
-      eq(r.section, data.section),
-      inArray(r.status, ['pending', 'arrived']),
-    ),
-    columns: { party_size: true },
-  })
-  const occupiedPax = occupied.reduce((s, r) => s + r.party_size, 0)
+  const { data: occupied } = await supabase
+    .from('reservations')
+    .select('party_size')
+    .eq('restaurant_id', restaurant.id)
+    .eq('date', data.date)
+    .eq('section', data.section)
+    .in('status', ['pending', 'arrived'])
+
+  const occupiedPax = (occupied || []).reduce((s: number, r: { party_size: number }) => s + r.party_size, 0)
   const capacity = data.section === 'indoor' ? restaurant.capacity_indoor : restaurant.capacity_outdoor
   const total = occupiedPax + data.party_size
   const sectionLabel = data.section === 'indoor' ? 'El menjador' : 'La terrassa'
@@ -128,9 +147,7 @@ export async function createReservation(data: {
     ? restaurant.default_duration_lunch_min
     : restaurant.default_duration_dinner_min
 
-  const id = crypto.randomUUID()
-  await db.insert(reservations).values({
-    id,
+  const { data: newRes, error } = await supabase.from('reservations').insert({
     restaurant_id: restaurant.id,
     date: data.date,
     time: data.time,
@@ -144,11 +161,14 @@ export async function createReservation(data: {
     table_number: data.table_number?.trim() || null,
     status: 'pending',
     source: 'manual',
-  })
+    allergies: [],
+  }).select('id').single()
+
+  if (error) return { error: 'Error en guardar la reserva' }
 
   revalidatePath('/avui')
   revalidatePath('/agenda')
-  return { id, warning }
+  return { id: newRes.id, warning }
 }
 
 export async function updateReservation(
@@ -170,7 +190,8 @@ export async function updateReservation(
     return { error: 'Comprova els camps obligatoris' }
   }
 
-  await db.update(reservations).set({
+  const { supabase } = await getAuthRestaurant()
+  const { error } = await supabase.from('reservations').update({
     date: data.date,
     time: data.time,
     party_size: data.party_size,
@@ -182,7 +203,9 @@ export async function updateReservation(
     notes: data.notes?.trim() || null,
     table_number: data.table_number?.trim() || null,
     updated_at: new Date().toISOString(),
-  }).where(eq(reservations.id, id))
+  }).eq('id', id)
+
+  if (error) return { error: 'Error en actualitzar la reserva' }
 
   revalidatePath('/avui')
   revalidatePath('/agenda')
@@ -191,10 +214,56 @@ export async function updateReservation(
 }
 
 export async function cancelReservation(id: string): Promise<{ ok: true }> {
-  await db.update(reservations)
-    .set({ status: 'cancelled', updated_at: new Date().toISOString() })
-    .where(eq(reservations.id, id))
+  const { supabase } = await getAuthRestaurant()
+  await supabase.from('reservations')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('id', id)
   revalidatePath('/avui')
   revalidatePath('/reserva/' + id)
   return { ok: true }
+}
+
+export async function getReservationById(id: string): Promise<Reservation | null> {
+  const { supabase } = await getAuthRestaurant()
+  const { data, error } = await supabase
+    .from('reservations')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (error) return null
+  return data as Reservation
+}
+
+export async function getOccupiedTableNumbers(
+  restaurantId: string,
+  date: string,
+  time: string,
+  durationMinutes: number,
+  excludeReservationId?: string,
+): Promise<string[]> {
+  const { supabase } = await getAuthRestaurant()
+
+  const { data } = await supabase
+    .from('reservations')
+    .select('id, table_number, time, duration_minutes')
+    .eq('restaurant_id', restaurantId)
+    .eq('date', date)
+    .in('status', ['pending', 'arrived', 'standby'])
+    .not('table_number', 'is', null)
+
+  if (!data) return []
+
+  const [rh, rm] = time.split(':').map(Number)
+  const rStart = rh * 60 + rm
+  const rEnd = rStart + durationMinutes
+
+  return data
+    .filter(r => {
+      if (excludeReservationId && r.id === excludeReservationId) return false
+      const [oh, om] = r.time.split(':').map(Number)
+      const oStart = oh * 60 + om
+      const oEnd = oStart + (r.duration_minutes || 90)
+      return rStart < oEnd && rEnd > oStart
+    })
+    .map(r => r.table_number as string)
 }

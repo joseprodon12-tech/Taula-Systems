@@ -6,23 +6,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
-    "seed": "tsx scripts/seed.ts"
+    "lint": "next lint"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.3",
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.106.1",
     "better-auth": "^1.6.11",
     "date-fns": "^4.1.0",
-    "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.14.0",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.75.0",
     "resend": "^6.12.3",
+    "twilio": "^6.0.2",
     "zod": "^4.4.3"
   },
   "pnpm": {
@@ -35,7 +32,6 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "drizzle-kit": "^0.31.10",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"

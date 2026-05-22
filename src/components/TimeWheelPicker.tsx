@@ -46,7 +46,7 @@ interface Props {
 
 export default function TimeWheelPicker({ lunchSlots, dinnerSlots, selected, onSelect }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const progRef = useRef(false)
   const { t } = useT()
   const dinarLabel = t('avui.dinar')

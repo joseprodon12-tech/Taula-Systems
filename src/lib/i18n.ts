@@ -43,6 +43,7 @@ const ca = {
       arrived:   'Ha vingut',
       no_show:   'No-show',
       cancelled: 'Cancel·lada',
+      standby:   'Sense taula',
     },
     accions: {
       canviarEstat:  'CANVIAR ESTAT',
@@ -197,6 +198,7 @@ const es: DeepString<typeof ca> = {
       arrived:   'Ha llegado',
       no_show:   'No-show',
       cancelled: 'Cancelada',
+      standby:   'Sin mesa',
     },
     accions: {
       canviarEstat:  'CAMBIAR ESTADO',

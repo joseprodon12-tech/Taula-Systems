@@ -96,6 +96,7 @@ function distribute(tables: Table[], reservations: Reservation[]): Map<string, R
 }
 
 const STATUS_BG: Record<string, string> = {
+  standby: '#FEF08A',
   pending: '#2E5BFF',
   arrived: '#10B981',
   no_show: '#94A3B8',
@@ -278,12 +279,15 @@ export default function GanttView({
                           padding: '3px 7px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
                           opacity: r.status === 'no_show' ? 0.55 : 1,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
+                          border: r.status === 'standby' ? '1.5px solid #D97706' : 'none',
                         }}
                       >
                         <span style={{
-                          fontSize: 11, fontWeight: 600, color: '#fff',
+                          fontSize: 11, fontWeight: 600,
+                          color: r.status === 'standby' ? '#854D0E' : '#fff',
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         }}>
+                          {r.status === 'standby' && '⚠ '}
                           {w < 60
                             ? `×${r.party_size}`
                             : w < 100
@@ -291,7 +295,10 @@ export default function GanttView({
                               : r.customer_name}
                         </span>
                         {w >= 60 && (
-                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.82)', whiteSpace: 'nowrap' }}>
+                          <span style={{
+                            fontSize: 10, whiteSpace: 'nowrap',
+                            color: r.status === 'standby' ? '#92400E' : 'rgba(255,255,255,0.82)',
+                          }}>
                             ×{r.party_size}
                           </span>
                         )}
