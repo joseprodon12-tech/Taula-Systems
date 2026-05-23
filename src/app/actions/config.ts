@@ -24,8 +24,9 @@ export async function getOrCreateRestaurant(): Promise<Restaurant> {
   const { supabase, user, restaurant } = await getAuthRestaurant()
   if (restaurant) return restaurant
 
+  const slug = `restaurant-${user.id.substring(0, 8)}`
   const { data, error } = await supabase.from('restaurants').insert({
-    slug: 'el-meu-restaurant',
+    slug,
     name: 'El meu restaurant',
     owner_id: user.id,
     primary_color: '#C17B2F',
