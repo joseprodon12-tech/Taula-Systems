@@ -36,13 +36,13 @@ export async function getOrCreateRestaurant(): Promise<Restaurant> {
     default_duration_dinner_min: 110,
     group_threshold: 6,
     weekly_hours: {
-      monday: { closed: true },
-      tuesday: { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
-      wednesday: { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
-      thursday: { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
-      friday: { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
-      saturday: { lunch: ['13:00', '16:30'], dinner: ['20:00', '23:30'] },
-      sunday: { lunch: ['13:00', '16:00'] },
+      '0': { closed: true },
+      '1': { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
+      '2': { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
+      '3': { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
+      '4': { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
+      '5': { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
+      '6': { lunch: ['13:00', '16:30'], dinner: ['20:00', '23:30'] },
     },
   }).select().single()
   if (error) throw error
