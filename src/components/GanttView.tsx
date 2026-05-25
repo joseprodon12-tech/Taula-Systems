@@ -326,10 +326,10 @@ export default function GanttView({
         borderRight: '1px solid var(--border)',
         background: 'var(--bg)',
       }}>
-        {/* Header corner — matches header height, no decorative box */}
+        {/* Header corner — transparent so it doesn't show as a rectangle */}
         <div style={{
           height: HEADER_H,
-          background: 'var(--surface)',
+          background: 'var(--bg)',
           borderBottom: '2px solid var(--border)',
         }} />
 
@@ -504,7 +504,6 @@ export default function GanttView({
                           color: blockFg(r),
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         }}>
-                          {r.status === 'standby' && '⚠ '}
                           {w < 60
                             ? `×${r.party_size}`
                             : w < 100
@@ -515,6 +514,14 @@ export default function GanttView({
                           <span style={{ fontSize: 11, whiteSpace: 'nowrap', color: blockSubFg(r) }}>
                             ×{r.party_size}
                           </span>
+                        )}
+                        {(r.status === 'standby' || !r.table_number) && (
+                          <span style={{
+                            position: 'absolute', top: 2, right: 4,
+                            fontSize: 10, lineHeight: 1,
+                            color: '#FCD34D',
+                            pointerEvents: 'none',
+                          }}>⚠</span>
                         )}
                       </div>
                     )
