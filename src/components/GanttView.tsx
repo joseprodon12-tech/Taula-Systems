@@ -483,29 +483,26 @@ export default function GanttView({
                           zIndex: 2,
                         } as React.CSSProperties}
                       >
-                        <span style={{
-                          fontSize: 12, fontWeight: 700,
-                          color: blockFg(r),
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                        }}>
-                          {w < 60
-                            ? `×${r.party_size}`
-                            : w < 100
-                              ? r.customer_name.split(' ').map(n => n[0]).join('').slice(0, 3).toUpperCase()
-                              : r.customer_name}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
+                          {(r.status === 'standby' || !r.table_number) && w >= 40 && (
+                            <span style={{ fontSize: 14, lineHeight: 1, color: '#FCD34D', flexShrink: 0 }}>⚠</span>
+                          )}
+                          <span style={{
+                            fontSize: 12, fontWeight: 700,
+                            color: blockFg(r),
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                          }}>
+                            {w < 60
+                              ? `×${r.party_size}`
+                              : w < 100
+                                ? r.customer_name.split(' ').map(n => n[0]).join('').slice(0, 3).toUpperCase()
+                                : r.customer_name}
+                          </span>
+                        </div>
                         {w >= 60 && (
                           <span style={{ fontSize: 11, whiteSpace: 'nowrap', color: blockSubFg(r) }}>
                             ×{r.party_size}
                           </span>
-                        )}
-                        {(r.status === 'standby' || !r.table_number) && (
-                          <span style={{
-                            position: 'absolute', top: 3, right: 5,
-                            fontSize: 14, lineHeight: 1,
-                            color: '#FCD34D',
-                            pointerEvents: 'none',
-                          }}>⚠</span>
                         )}
                       </div>
                     )
@@ -523,7 +520,17 @@ export default function GanttView({
             position: 'absolute', left: nowX, top: 0, bottom: 0,
             width: 2, background: 'var(--primary)', pointerEvents: 'none', zIndex: 3,
             borderRadius: 1,
-          }} />
+          }}>
+            {/* Circle dot at the header/row boundary */}
+            <div style={{
+              position: 'absolute',
+              top: HEADER_H - 4,
+              left: -3,
+              width: 8, height: 8,
+              borderRadius: '50%',
+              background: 'var(--primary)',
+            }} />
+          </div>
         )}
       </div>
     </div>
