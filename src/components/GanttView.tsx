@@ -165,12 +165,14 @@ export default function GanttView({
     return () => clearInterval(id)
   }, [date])
 
-  // Force layout recalculation on mount to fix mobile initial render bug with overflow-x: auto
+  // Double rAF forces a full paint cycle — fixes sticky column overlap on iOS/Android at mount
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    el.scrollLeft = 1
-    el.scrollLeft = 0
+    requestAnimationFrame(() => {
+      el.scrollLeft = 1
+      requestAnimationFrame(() => { el.scrollLeft = 0 })
+    })
   }, [])
 
   const byTable = distribute(tables, localReservations)
@@ -313,14 +315,15 @@ export default function GanttView({
       <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', background: 'var(--surface)' }}>
         <div style={{
           width: tableColW, flexShrink: 0, height: HEADER_H,
-          position: 'sticky', left: 0, zIndex: 3,
+          position: 'sticky', left: 0, zIndex: 10,
           background: 'var(--surface)', borderRight: '1px solid var(--border)',
         }} />
         <div style={{ position: 'relative', width: contentW, height: HEADER_H, flexShrink: 0 }}>
           {hourMarkers.map(m => (
             <span key={m.x} style={{
               position: 'absolute', left: m.x, top: '50%',
-              transform: 'translate(-50%,-50%)',
+              // Left-align labels near x=0 so they don't hide behind the sticky column
+              transform: m.x < 24 ? 'translateY(-50%)' : 'translate(-50%,-50%)',
               fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap',
             }}>{m.label}</span>
           ))}
@@ -355,7 +358,7 @@ export default function GanttView({
             }}>
               <div style={{
                 width: tableColW, flexShrink: 0, height: SEC_H,
-                position: 'sticky', left: 0, zIndex: 2,
+                position: 'sticky', left: 0, zIndex: 9,
                 background: 'var(--surface)', borderRight: '1px solid var(--border)',
                 display: 'flex', alignItems: 'center', paddingLeft: 12,
               }}>
@@ -406,7 +409,7 @@ export default function GanttView({
                 {/* Sticky label */}
                 <div style={{
                   width: tableColW, flexShrink: 0, height: ROW_H,
-                  position: 'sticky', left: 0, zIndex: 2,
+                  position: 'sticky', left: 0, zIndex: 8,
                   background: 'var(--bg)', borderRight: '1px solid var(--border)',
                   display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingLeft: 12,
                 }}>

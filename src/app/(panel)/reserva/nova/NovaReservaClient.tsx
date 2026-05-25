@@ -263,7 +263,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         )}
 
         {/* Fila 2: Persones + Secció */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+        <div className="grid grid-cols-1 gap-3 mb-5">
           {/* Persones */}
           <div>
             <label className="label">{t('reserva.camps.persones')}</label>
@@ -506,7 +506,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           type="submit"
           className="btn btn-primary btn-lg"
           style={{ width: '100%' }}
-          disabled={closed || pending}
+          disabled={pending || (!edit && closed)}
         >
           {pending ? '...' : t('reserva.guardar')}
         </button>

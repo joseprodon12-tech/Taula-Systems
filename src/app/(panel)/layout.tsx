@@ -4,11 +4,12 @@ import type { ElementType, ReactNode } from 'react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Plus, Settings, LayoutDashboard, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Settings, LayoutDashboard, CalendarDays, ChevronLeft } from 'lucide-react'
 import { LocaleProvider, useT } from '@/context/LocaleContext'
 import type { TKey } from '@/lib/i18n'
 
-const NAV_W = 224 // w-56 = 14rem
+const NAV_W         = 224  // w-56
+const NAV_W_COMPACT = 48   // w-12
 
 const NAV_ITEMS: { href: string; icon: ElementType; key: TKey }[] = [
   { href: '/avui',   icon: LayoutDashboard, key: 'nav.avui'   },
@@ -19,85 +20,127 @@ const NAV_ITEMS: { href: string; icon: ElementType; key: TKey }[] = [
 function PanelUI({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const { t } = useT()
-  const [navOpen, setNavOpen] = useState(true)
+  const [compact, setCompact] = useState(false)
+  const [hovered, setHovered] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('taula_nav')
-    if (saved === 'closed') setNavOpen(false)
+    if (saved === 'compact') setCompact(true)
   }, [])
 
-  function toggleNav() {
-    const next = !navOpen
-    setNavOpen(next)
-    localStorage.setItem('taula_nav', next ? 'open' : 'closed')
+  function toggle() {
+    const next = !compact
+    setCompact(next)
+    localStorage.setItem('taula_nav', next ? 'compact' : 'expanded')
   }
+
+  // Temporarily expanded on hover when in compact mode
+  const isExpanded = !compact || hovered
 
   return (
     <div className="h-screen overflow-hidden">
 
-      {/* Sidebar — fixed, desktop only */}
+      {/* Sidebar — fixed, desktop only. Collapses to icon strip; expands on hover. */}
       <aside
         className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 z-20 border-r"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         style={{
-          width: NAV_W,
+          width: isExpanded ? NAV_W : NAV_W_COMPACT,
           background: 'var(--bg)',
           borderColor: 'var(--border)',
-          transform: navOpen ? 'translateX(0)' : `translateX(-${NAV_W}px)`,
-          transition: 'transform 0.2s ease',
+          transition: 'width 0.2s ease',
+          overflow: 'hidden',
         }}
       >
-        <div className="px-5 py-5 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
-          <span className="text-base font-bold" style={{ color: 'var(--primary)' }}>Taula Systems</span>
-          <button
-            onClick={toggleNav}
-            className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
-            style={{ color: 'var(--text-muted)' }}
-            title="Amaga la navegació"
-          >
-            <ChevronLeft size={16} />
-          </button>
+        {/* Header: "T" in compact, "Taula Systems + collapse arrow" when expanded */}
+        <div
+          className="border-b flex items-center"
+          style={{
+            borderColor: 'var(--border)',
+            height: 64,
+            padding: isExpanded ? '0 20px' : 0,
+            justifyContent: isExpanded ? 'space-between' : 'center',
+          }}
+        >
+          {isExpanded ? (
+            <>
+              <span
+                className="text-base font-bold"
+                style={{ color: 'var(--primary)', whiteSpace: 'nowrap' }}
+              >
+                Taula Systems
+              </span>
+              <button
+                onClick={toggle}
+                className="p-1 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
+                style={{ color: 'var(--text-muted)' }}
+                title="Col·lapsa la navegació"
+              >
+                <ChevronLeft size={16} />
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={toggle}
+              className="flex items-center justify-center w-full h-full"
+              style={{ fontWeight: 800, color: 'var(--primary)', fontSize: 20 }}
+              title="Expandeix la navegació"
+            >
+              T
+            </button>
+          )}
         </div>
 
-        <nav className="flex-1 p-3 space-y-1">
+        {/* Nav items — icon+label when expanded, icon only when compact */}
+        <nav className="flex-1 p-2 space-y-1">
           {NAV_ITEMS.map(({ href, icon: Icon, key }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
               <Link
                 key={href}
                 href={href}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                style={active ? { background: '#EEF2FF', color: 'var(--primary)' } : { color: 'var(--text-muted)' }}
+                className="flex items-center rounded-lg text-sm font-medium transition-colors"
+                style={{
+                  gap: isExpanded ? 12 : 0,
+                  justifyContent: isExpanded ? 'flex-start' : 'center',
+                  padding: isExpanded ? '8px 12px' : '10px 0',
+                  ...(active
+                    ? { background: '#EEF2FF', color: 'var(--primary)' }
+                    : { color: 'var(--text-muted)' }),
+                }}
+                title={!isExpanded ? t(key) : undefined}
               >
                 <Icon size={16} />
-                {t(key)}
+                {isExpanded && <span style={{ whiteSpace: 'nowrap' }}>{t(key)}</span>}
               </Link>
             )
           })}
         </nav>
 
-        <div className="p-3 border-t" style={{ borderColor: 'var(--border)' }}>
-          <Link href="/reserva/nova" className="btn btn-primary w-full">
-            <Plus size={16} />
-            {t('reserva.nova')}
-          </Link>
+        {/* New reservation — full button when expanded, "+" icon when compact */}
+        <div className="p-2 border-t" style={{ borderColor: 'var(--border)' }}>
+          {isExpanded ? (
+            <Link href="/reserva/nova" className="btn btn-primary w-full" style={{ whiteSpace: 'nowrap' }}>
+              <Plus size={16} />
+              {t('reserva.nova')}
+            </Link>
+          ) : (
+            <Link
+              href="/reserva/nova"
+              className="flex items-center justify-center w-full rounded-lg"
+              style={{ height: 40, background: 'var(--primary)', color: '#fff' }}
+              title={t('reserva.nova')}
+            >
+              <Plus size={18} />
+            </Link>
+          )}
         </div>
       </aside>
 
-      {/* Expand button — visible only when sidebar is collapsed, desktop only */}
-      {!navOpen && (
-        <button
-          className="hidden md:flex fixed left-3 top-3 z-30 items-center justify-center w-8 h-8 rounded-lg border"
-          style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-          onClick={toggleNav}
-          title="Mostra la navegació"
-        >
-          <ChevronRight size={14} />
-        </button>
-      )}
-
-      {/* Main area — shifts right by nav width on desktop when nav is open */}
+      {/* Main area — margin-left matches compact (48px) or expanded (224px) state, desktop only */}
       <div
-        className={`flex flex-col h-screen overflow-hidden ${navOpen ? 'md:ml-56' : ''}`}
+        className={`flex flex-col h-screen overflow-hidden ${compact ? 'md:ml-12' : 'md:ml-56'}`}
         style={{ transition: 'margin-left 0.2s ease' }}
       >
         {/* Mobile top bar */}
