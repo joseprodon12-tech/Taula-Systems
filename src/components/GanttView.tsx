@@ -326,10 +326,10 @@ export default function GanttView({
         borderRight: '1px solid var(--border)',
         background: 'var(--bg)',
       }}>
-        {/* Header corner — transparent so it doesn't show as a rectangle */}
+        {/* Header corner — same surface as the hours header so it reads as one continuous bar */}
         <div style={{
           height: HEADER_H,
-          background: 'var(--bg)',
+          background: 'var(--surface)',
           borderBottom: '2px solid var(--border)',
         }} />
 
@@ -368,7 +368,7 @@ export default function GanttView({
       </div>
 
       {/* ── RIGHT CONTENT: scrolls horizontally ── */}
-      <div ref={containerRef} style={{ flex: 1, overflowX: 'auto' }}>
+      <div ref={containerRef} style={{ flex: 1, overflowX: 'auto', position: 'relative' }}>
 
         {/* Header: hour labels */}
         <div style={{
@@ -390,13 +390,6 @@ export default function GanttView({
               fontSize: 11, color: 'var(--text-muted)', letterSpacing: 3,
             }}>···</span>
           ))}
-          {nowX !== null && (
-            <div style={{
-              position: 'absolute', left: nowX, top: 0, bottom: 0,
-              width: 2, background: 'var(--primary)', pointerEvents: 'none', zIndex: 2,
-              borderRadius: 1,
-            }} />
-          )}
         </div>
 
         {/* Rows */}
@@ -461,15 +454,6 @@ export default function GanttView({
                     }} />
                   ))}
 
-                  {/* Now line — above blocks */}
-                  {nowX !== null && (
-                    <div style={{
-                      position: 'absolute', left: nowX, top: 0, bottom: 0,
-                      width: 2, background: 'var(--primary)', pointerEvents: 'none', zIndex: 3,
-                      borderRadius: 1,
-                    }} />
-                  )}
-
                   {/* Reservation blocks */}
                   {(byTable.get(tbl.id) ?? []).map(r => {
                     const x = timeToX(r.time, segs)
@@ -517,8 +501,8 @@ export default function GanttView({
                         )}
                         {(r.status === 'standby' || !r.table_number) && (
                           <span style={{
-                            position: 'absolute', top: 2, right: 4,
-                            fontSize: 10, lineHeight: 1,
+                            position: 'absolute', top: 3, right: 5,
+                            fontSize: 14, lineHeight: 1,
                             color: '#FCD34D',
                             pointerEvents: 'none',
                           }}>⚠</span>
@@ -533,6 +517,14 @@ export default function GanttView({
             })}
           </Fragment>
         ))}
+        {/* Single spanning now line — covers header + all rows top to bottom */}
+        {nowX !== null && (
+          <div style={{
+            position: 'absolute', left: nowX, top: 0, bottom: 0,
+            width: 2, background: 'var(--primary)', pointerEvents: 'none', zIndex: 3,
+            borderRadius: 1,
+          }} />
+        )}
       </div>
     </div>
   )
