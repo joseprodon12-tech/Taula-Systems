@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const DIES_CA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg']
@@ -9,10 +10,8 @@ const MESOS_CA = [
 ]
 
 interface Props {
-  // date dots: { '2026-05-14': { count: 3, pax: 12 }, ... }
   dots: Record<string, { count: number; pax: number }>
-  selectedDate: string  // ISO yyyy-mm-dd
-  // show 2 months starting from this month
+  selectedDate: string
   startMonth?: { year: number; month: number }
 }
 
@@ -31,7 +30,6 @@ function MonthGrid({
   const today = new Date()
   const todayStr = today.toISOString().split('T')[0]
   const firstDay = new Date(year, month, 1)
-  // Monday-first: (getDay() + 6) % 7
   const startOffset = (firstDay.getDay() + 6) % 7
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
@@ -89,14 +87,15 @@ export default function MiniCalendar({ dots, selectedDate, startMonth }: Props) 
     year: new Date().getFullYear(),
     month: new Date().getMonth(),
   }
+  const [count, setCount] = useState(6)
 
-  const months = [
-    { year: base.year, month: base.month },
-    {
-      year: base.month === 11 ? base.year + 1 : base.year,
-      month: base.month === 11 ? 0 : base.month + 1,
-    },
-  ]
+  const months = Array.from({ length: count }, (_, i) => {
+    const total = base.month + i
+    return {
+      year: base.year + Math.floor(total / 12),
+      month: total % 12,
+    }
+  })
 
   function handleSelect(date: string) {
     router.push(`/avui?data=${date}`)
@@ -114,6 +113,13 @@ export default function MiniCalendar({ dots, selectedDate, startMonth }: Props) 
           onSelect={handleSelect}
         />
       ))}
+      <button
+        onClick={() => setCount(c => c + 3)}
+        className="w-full text-center py-1 rounded text-xs transition-colors hover:bg-gray-50"
+        style={{ color: 'var(--text-muted)' }}
+      >
+        Carrega més ↓
+      </button>
     </div>
   )
 }

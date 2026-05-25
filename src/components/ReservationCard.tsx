@@ -48,6 +48,11 @@ export default function ReservationCard({ reservation: r }: Props) {
           <div className="flex items-center gap-1" style={{ color: 'var(--primary)' }}>
             <Users size={14} />
             <span className="text-base font-bold">{r.party_size}p</span>
+            {r.table_number && (
+              <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+                · {r.table_number}
+              </span>
+            )}
           </div>
         </div>
         <span className={`badge ${STATUS_CSS[r.status]} shrink-0`}>

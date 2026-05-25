@@ -118,12 +118,43 @@ export async function createReservation(data: {
 }): Promise<{ id: string; warning?: string } | { error: string; fieldErrors?: Record<string, string> }> {
   const fieldErrors: Record<string, string> = {}
   if (!data.customer_name.trim()) fieldErrors.customer_name = 'El nom és obligatori'
-  if (!data.customer_phone.trim()) fieldErrors.customer_phone = 'El telèfon és obligatori'
   if (!data.date) fieldErrors.date = 'La data és obligatòria'
   if (!data.time) fieldErrors.time = "L'hora és obligatòria"
   if (Object.keys(fieldErrors).length) return { error: 'Comprova els camps obligatoris', fieldErrors }
 
   const { supabase, restaurant } = await getAuthRestaurant()
+
+  // Check for table overlap before inserting
+  if (data.table_number) {
+    const hour = parseInt(data.time.split(':')[0])
+    const isLunchSlot = hour >= 12 && hour < 17
+    const resolvedDuration = data.duration_minutes
+      ?? (isLunchSlot ? restaurant.default_duration_lunch_min : restaurant.default_duration_dinner_min)
+
+    const { data: tableConflicts } = await supabase
+      .from('reservations')
+      .select('time, duration_minutes')
+      .eq('restaurant_id', restaurant.id)
+      .eq('date', data.date)
+      .eq('table_number', data.table_number)
+      .in('status', ['pending', 'arrived', 'standby'])
+
+    if (tableConflicts && tableConflicts.length > 0) {
+      const [rh, rm] = data.time.split(':').map(Number)
+      const rStart = rh * 60 + rm
+      const rEnd = rStart + resolvedDuration
+      const hasConflict = tableConflicts.some((c: { time: string; duration_minutes: number }) => {
+        const [ch, cm] = c.time.split(':').map(Number)
+        const cStart = ch * 60 + cm
+        const cEnd = cStart + (c.duration_minutes || 90)
+        return rStart < cEnd && rEnd > cStart
+      })
+      if (hasConflict) return {
+        error: `La taula ${data.table_number} ja té una reserva en aquest horari`,
+        fieldErrors: { table_number: 'Taula ocupada en aquest interval' },
+      }
+    }
+  }
 
   const { data: occupied } = await supabase
     .from('reservations')
@@ -186,7 +217,7 @@ export async function updateReservation(
     duration_minutes?: number
   },
 ): Promise<{ ok: true } | { error: string }> {
-  if (!data.customer_name.trim() || !data.customer_phone.trim() || !data.date || !data.time) {
+  if (!data.customer_name.trim() || !data.date || !data.time) {
     return { error: 'Comprova els camps obligatoris' }
   }
 

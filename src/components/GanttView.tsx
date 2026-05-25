@@ -10,6 +10,7 @@ const SLOT_PX     = 40
 const PX_PER_MIN  = SLOT_PX / SLOT_MIN
 const GAP_PX      = 48
 const TABLE_COL_W = 88
+const TABLE_COL_W_MOBILE = 60
 const ROW_H      = 52
 const HEADER_H   = 36
 const SEC_H      = 26   // section label row height
@@ -104,6 +105,16 @@ function distribute(tables: Table[], reservations: Reservation[]): Map<string, R
   return result
 }
 
+function todayIso(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function currentTimeStr(): string {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 const STATUS_BG: Record<string, string> = {
   standby: '#FEF08A',
   pending: '#2E5BFF',
@@ -124,7 +135,7 @@ interface Props {
 }
 
 export default function GanttView({
-  tables, reservations, lunchHours, dinnerHours, onSlotClick, onReservationClick, onReservationMove,
+  tables, reservations, date, lunchHours, dinnerHours, onSlotClick, onReservationClick, onReservationMove,
 }: Props) {
   const { t } = useT()
   const segs     = buildSegs(lunchHours, dinnerHours)
@@ -136,6 +147,31 @@ export default function GanttView({
   const containerRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [ghost, setGhost] = useState<{ tableId: string; time: string; reservationId: string } | null>(null)
+
+  // Responsive column width
+  const [tableColW, setTableColW] = useState(TABLE_COL_W)
+  useEffect(() => {
+    function update() { setTableColW(window.innerWidth < 640 ? TABLE_COL_W_MOBILE : TABLE_COL_W) }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
+  // Current time line — updates every minute, only when viewing today
+  const [nowTime, setNowTime] = useState(currentTimeStr)
+  useEffect(() => {
+    if (date !== todayIso()) return
+    const id = setInterval(() => setNowTime(currentTimeStr()), 60000)
+    return () => clearInterval(id)
+  }, [date])
+
+  // Force layout recalculation on mount to fix mobile initial render bug with overflow-x: auto
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    el.scrollLeft = 1
+    el.scrollLeft = 0
+  }, [])
 
   const byTable = distribute(tables, localReservations)
 
@@ -161,6 +197,9 @@ export default function GanttView({
       hourMarkers.push({ label: toTime(m), x: s.offsetPx + (m - s.startMin) * PX_PER_MIN })
   }
 
+  const isToday = date === todayIso()
+  const nowX = isToday ? timeToX(nowTime, segs) : null
+
   const indoorTables  = tables.filter(tbl => tbl.section === 'indoor')
   const outdoorTables = tables.filter(tbl => tbl.section === 'outdoor')
   const hasBoth = indoorTables.length > 0 && outdoorTables.length > 0
@@ -184,7 +223,7 @@ export default function GanttView({
     const container = containerRef.current
     if (!container) return null
     const rect = container.getBoundingClientRect()
-    const x = clientX - rect.left - TABLE_COL_W + container.scrollLeft
+    const x = clientX - rect.left - tableColW + container.scrollLeft
     const y = clientY - rect.top
     const time = xToTime(x, segs)
     const tRow = tableRows.find(tr => y >= tr.yStart && y < tr.yEnd)
@@ -273,7 +312,7 @@ export default function GanttView({
       {/* ── Header ── */}
       <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', background: 'var(--surface)' }}>
         <div style={{
-          width: TABLE_COL_W, flexShrink: 0, height: HEADER_H,
+          width: tableColW, flexShrink: 0, height: HEADER_H,
           position: 'sticky', left: 0, zIndex: 3,
           background: 'var(--surface)', borderRight: '1px solid var(--border)',
         }} />
@@ -293,6 +332,13 @@ export default function GanttView({
               fontSize: 11, color: 'var(--text-muted)', letterSpacing: 3,
             }}>···</span>
           ))}
+          {nowX !== null && (
+            <div style={{
+              position: 'absolute', left: nowX, top: 0, bottom: 0,
+              width: 2, background: 'var(--primary)', pointerEvents: 'none', zIndex: 2,
+              borderRadius: 1,
+            }} />
+          )}
         </div>
       </div>
 
@@ -308,7 +354,7 @@ export default function GanttView({
               background: 'var(--surface)',
             }}>
               <div style={{
-                width: TABLE_COL_W, flexShrink: 0, height: SEC_H,
+                width: tableColW, flexShrink: 0, height: SEC_H,
                 position: 'sticky', left: 0, zIndex: 2,
                 background: 'var(--surface)', borderRight: '1px solid var(--border)',
                 display: 'flex', alignItems: 'center', paddingLeft: 12,
@@ -345,6 +391,7 @@ export default function GanttView({
                       borderRadius: 6,
                       pointerEvents: 'none',
                       boxSizing: 'border-box',
+                      zIndex: 4,
                     }}
                   />
                 )
@@ -358,7 +405,7 @@ export default function GanttView({
               }}>
                 {/* Sticky label */}
                 <div style={{
-                  width: TABLE_COL_W, flexShrink: 0, height: ROW_H,
+                  width: tableColW, flexShrink: 0, height: ROW_H,
                   position: 'sticky', left: 0, zIndex: 2,
                   background: 'var(--bg)', borderRight: '1px solid var(--border)',
                   display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingLeft: 12,
@@ -397,7 +444,16 @@ export default function GanttView({
                     }} />
                   ))}
 
-                  {/* Reservation blocks */}
+                  {/* Current time line — z-index 3, above reservation blocks */}
+                  {nowX !== null && (
+                    <div style={{
+                      position: 'absolute', left: nowX, top: 0, bottom: 0,
+                      width: 2, background: 'var(--primary)', pointerEvents: 'none', zIndex: 3,
+                      borderRadius: 1,
+                    }} />
+                  )}
+
+                  {/* Reservation blocks — z-index 2, above grid lines */}
                   {(byTable.get(tbl.id) ?? []).map(r => {
                     const x = timeToX(r.time, segs)
                     if (x === null) return null
@@ -423,6 +479,7 @@ export default function GanttView({
                           userSelect: 'none',
                           WebkitUserSelect: 'none',
                           WebkitTouchCallout: 'none',
+                          zIndex: 2,
                         } as React.CSSProperties}
                       >
                         <span style={{
@@ -449,7 +506,7 @@ export default function GanttView({
                     )
                   })}
 
-                          {/* Ghost block — drop target preview */}
+                  {/* Ghost block — drop target preview */}
                   {ghostEl}
                 </div>
               </div>

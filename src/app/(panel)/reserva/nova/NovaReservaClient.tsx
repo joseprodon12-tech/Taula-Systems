@@ -359,7 +359,9 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         {/* Fila 4: Telèfon */}
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block' }}>
-            <span className="label">{t('reserva.camps.telefon')}</span>
+            <span className="label">
+              {t('reserva.camps.telefon')} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{t('reserva.camps.opcional')}</span>
+            </span>
             <input
               type="tel"
               className="input"

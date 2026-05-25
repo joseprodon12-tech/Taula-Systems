@@ -43,7 +43,7 @@ interface Props {
 
 export default function AvuiClient({ reserves, selectedDate, today, dots, restaurantCapacity, restaurant, tables }: Props) {
   const router = useRouter()
-  const { t, locale } = useT()
+  const { t } = useT()
   const { toast, show, hide } = useToast()
 
   async function handleReservationMove(id: string, tableId: string, time: string) {
@@ -52,15 +52,14 @@ export default function AvuiClient({ reserves, selectedDate, today, dots, restau
   }
 
   function formatDateHeader(iso: string): string {
-    const il = locale === 'ca' ? 'ca' : 'es'
+    const DIES = ['Dg', 'Dll', 'Dm', 'Dc', 'Dj', 'Dv', 'Ds']
+    const MESOS = ['Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny', 'Juliol', 'Agost', 'Setembre', 'Octubre', 'Novembre', 'Desembre']
     const [y, m, d] = iso.split('-').map(Number)
     const date = new Date(y, m - 1, d)
     const [ty, tm, td] = today.split('-').map(Number)
     const todayDate = new Date(ty, tm - 1, td)
     const diff = Math.round((date.getTime() - todayDate.getTime()) / 86_400_000)
-    const weekday = new Intl.DateTimeFormat(il, { weekday: 'long' }).format(date)
-    const month   = new Intl.DateTimeFormat(il, { month: 'long' }).format(date)
-    const label = `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${d} de ${month}`
+    const label = `${DIES[date.getDay()]} ${d} ${MESOS[m - 1]}`
     if (diff === 0) return `${t('avui.avuiLabel')} — ${label}`
     if (diff === 1) return `${t('avui.dema')} — ${label}`
     if (diff === -1) return `${t('avui.ahir')} — ${label}`
@@ -202,13 +201,9 @@ export default function AvuiClient({ reserves, selectedDate, today, dots, restau
 
       {/* ── Sidebar desktop ── */}
       <aside className="hidden md:block w-52 shrink-0" aria-label="Calendari i estadístiques">
-        <div className="card sticky top-0">
-          <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-            {t('avui.calendari')}
-          </p>
-          <MiniCalendar dots={dots} selectedDate={selectedDate} startMonth={startMonth} />
+        <div className="card sticky top-0" style={{ maxHeight: 'calc(100vh - 48px)', overflowY: 'auto' }}>
           {restaurantCapacity > 0 && (
-            <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+            <div className="mb-3 pb-3" style={{ borderBottom: '1px solid var(--border)' }}>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 {t('avui.capacitat')}: <strong style={{ color: 'var(--text)' }}>{restaurantCapacity}p</strong>
               </p>
@@ -220,6 +215,10 @@ export default function AvuiClient({ reserves, selectedDate, today, dots, restau
               )}
             </div>
           )}
+          <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
+            {t('avui.calendari')}
+          </p>
+          <MiniCalendar dots={dots} selectedDate={selectedDate} startMonth={startMonth} />
         </div>
       </aside>
 
