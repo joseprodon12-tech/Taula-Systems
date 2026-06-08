@@ -39,20 +39,19 @@ export default function ReservationCard({ reservation: r }: Props) {
         if (target.closest('button')) e.preventDefault()
       }}
     >
-      {/* Top row: hora + pax + badge */}
-      <div className="flex items-start justify-between gap-2 mb-2">
+      {/* Top row: nom + pax + badge */}
+      <div className="flex items-start justify-between gap-2 mb-1">
         <div className="flex items-center gap-3">
-          <span className="text-lg font-bold tabular-nums" style={{ color: 'var(--text)' }}>
-            {r.time}
+          <span className="text-lg font-bold" style={{ color: 'var(--text)' }}>
+            {r.customer_name}
           </span>
           <div className="flex items-center gap-1" style={{ color: 'var(--primary)' }}>
             <Users size={14} />
             <span className="text-base font-bold">{r.party_size}p</span>
-            {r.table_number && (
-              <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-                · {r.table_number}
-              </span>
-            )}
+            {r.table_number
+              ? <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>· {r.table_number}</span>
+              : <span style={{ fontSize: 16, lineHeight: 1, color: '#B45309' }}>⚠</span>
+            }
           </div>
         </div>
         <span className={`badge ${STATUS_CSS[r.status]} shrink-0`}>
@@ -60,8 +59,8 @@ export default function ReservationCard({ reservation: r }: Props) {
         </span>
       </div>
 
-      {/* Nom */}
-      <p className="font-semibold text-sm mb-1" style={{ color: 'var(--text)' }}>{r.customer_name}</p>
+      {/* Hora */}
+      <p className="text-xs font-medium tabular-nums mb-1" style={{ color: 'var(--text-muted)' }}>{r.time}</p>
 
       {/* Telèfon */}
       <div className="flex items-center gap-1 text-xs mb-1" style={{ color: 'var(--text-muted)' }}>

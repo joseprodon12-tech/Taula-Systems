@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable react-hooks/static-components */
 
 import { useState } from 'react'
 import type { Restaurant } from '@/db/schema'

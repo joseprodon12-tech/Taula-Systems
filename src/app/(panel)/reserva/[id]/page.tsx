@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
-import { getOrCreateRestaurant } from '@/app/actions/config'
-import { getReservationById } from '@/app/actions/reservations'
+import { getRestaurant } from '@/app/actions/config'
+import { getReservationById, getCustomerHistory } from '@/app/actions/reservations'
 import { getTables } from '@/app/actions/tables'
 import ReservaDetallClient from './ReservaDetallClient'
 
@@ -10,13 +10,16 @@ interface Props {
 
 export default async function ReservaDetallPage({ params }: Props) {
   const { id } = await params
-  const [reservation, restaurant] = await Promise.all([
+  const [reservation, { restaurant }] = await Promise.all([
     getReservationById(id),
-    getOrCreateRestaurant(),
+    getRestaurant(),
   ])
   if (!reservation) notFound()
 
-  const tables = await getTables(restaurant.id)
+  const [tables, customerHistory] = await Promise.all([
+    getTables(restaurant.id),
+    getCustomerHistory(reservation.customer_phone),
+  ])
 
-  return <ReservaDetallClient reservation={reservation} tables={tables} />
+  return <ReservaDetallClient reservation={reservation} tables={tables} customerHistory={customerHistory} />
 }

@@ -1,24 +1,9 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getAvailableSlots } from '@/lib/schedule'
-import type { Reservation, Restaurant } from '@/db/schema'
-
-async function getAuthRestaurant() {
-  const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error('No autenticat')
-
-  const { data: restaurant, error } = await supabase
-    .from('restaurants')
-    .select('*')
-    .eq('owner_id', user.id)
-    .single()
-
-  if (error) throw error
-  return { supabase, restaurant: restaurant as Restaurant }
-}
+import { getAuthRestaurant } from '@/lib/auth'
+import type { Reservation } from '@/db/schema'
 
 export async function getReservationsForDay(restaurantId: string, date: string): Promise<Reservation[]> {
   const { supabase } = await getAuthRestaurant()
@@ -295,6 +280,28 @@ export async function moveReservation(
   revalidatePath('/avui')
   revalidatePath('/agenda')
   return { ok: true }
+}
+
+export async function getCustomerHistory(phone: string): Promise<{
+  visits: number
+  lastDate: string
+  recentNote: string | null
+} | null> {
+  if (!phone.trim()) return null
+  const { supabase, restaurant } = await getAuthRestaurant()
+  const { data } = await supabase
+    .from('reservations')
+    .select('date, notes')
+    .eq('restaurant_id', restaurant.id)
+    .eq('customer_phone', phone.trim())
+    .neq('status', 'cancelled')
+    .order('date', { ascending: false })
+  if (!data || data.length === 0) return null
+  return {
+    visits: data.length,
+    lastDate: data[0].date,
+    recentNote: data.find(r => r.notes)?.notes ?? null,
+  }
 }
 
 export async function getOccupiedTableNumbers(

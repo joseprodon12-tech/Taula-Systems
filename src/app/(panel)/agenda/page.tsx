@@ -1,4 +1,4 @@
-import { getOrCreateRestaurant } from '@/app/actions/config'
+import { getRestaurant } from '@/app/actions/config'
 import { getReservationsForWeek } from '@/app/actions/reservations'
 import AgendaClient from './AgendaClient'
 
@@ -26,7 +26,7 @@ export default async function AgendaPage({ searchParams }: Props) {
   const monday = setmana ?? getMondayISO(today)
   const sunday = addDays(monday, 6)
 
-  const restaurant = await getOrCreateRestaurant()
+  const { restaurant } = await getRestaurant()
   const reservationsByDay = await getReservationsForWeek(restaurant.id, monday, sunday)
 
   return (

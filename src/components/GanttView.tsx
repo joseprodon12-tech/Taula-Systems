@@ -11,7 +11,7 @@ const PX_PER_MIN  = SLOT_PX / SLOT_MIN
 const GAP_PX      = 48
 const TABLE_COL_W        = 88
 const TABLE_COL_W_MOBILE = 60
-const ROW_H   = 52
+const ROW_H   = 64
 const HEADER_H = 36
 const SEC_H   = 26
 const DRAG_THRESHOLD = 6
@@ -137,10 +137,11 @@ interface Props {
   onSlotClick: (tableId: string, time: string) => void
   onReservationClick: (id: string) => void
   onReservationMove?: (reservationId: string, newTableId: string, newTime: string) => Promise<void>
+  onWarning?: (msg: string) => void
 }
 
 export default function GanttView({
-  tables, reservations, date, lunchHours, dinnerHours, onSlotClick, onReservationClick, onReservationMove,
+  tables, reservations, date, lunchHours, dinnerHours, onSlotClick, onReservationClick, onReservationMove, onWarning,
 }: Props) {
   const { t } = useT()
   const segs     = buildSegs(lunchHours, dinnerHours)
@@ -181,6 +182,13 @@ export default function GanttView({
   }, [])
 
   const byTable = distribute(tables, localReservations)
+
+  function isOverCapacity(r: Reservation): boolean {
+    if (!r.table_number) return false
+    const tbl = tables.find(t => t.number === r.table_number && t.section === r.section)
+             ?? tables.find(t => t.number === r.table_number)
+    return !!tbl && tbl.capacity > 0 && r.party_size > tbl.capacity
+  }
 
   if (!segs.length) return (
     <p style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -294,6 +302,10 @@ export default function GanttView({
 
       const targetTable = tables.find(tbl => tbl.id === pos.tableId)
       if (!targetTable) return
+
+      if (targetTable.capacity > 0 && r.party_size > targetTable.capacity) {
+        onWarning?.(`⚠️ La taula ${targetTable.number} té capacitat per ${targetTable.capacity}p — el grup és de ${r.party_size}p`)
+      }
 
       setLocalReservations(prev => prev.map(res =>
         res.id === r.id
@@ -484,11 +496,11 @@ export default function GanttView({
                         } as React.CSSProperties}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
-                          {(r.status === 'standby' || !r.table_number) && w >= 40 && (
+                          {(r.status === 'standby' || !r.table_number || isOverCapacity(r)) && w >= 40 && (
                             <span style={{ fontSize: 14, lineHeight: 1, color: '#FCD34D', flexShrink: 0 }}>⚠</span>
                           )}
                           <span style={{
-                            fontSize: 12, fontWeight: 700,
+                            fontSize: 14, fontWeight: 700,
                             color: blockFg(r),
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>
@@ -500,9 +512,16 @@ export default function GanttView({
                           </span>
                         </div>
                         {w >= 60 && (
-                          <span style={{ fontSize: 11, whiteSpace: 'nowrap', color: blockSubFg(r) }}>
-                            ×{r.party_size}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                            <span style={{ fontSize: 13, whiteSpace: 'nowrap', color: blockSubFg(r) }}>
+                              ×{r.party_size}
+                            </span>
+                            {r.notes && (
+                              <span style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: blockSubFg(r), fontStyle: 'italic' }}>
+                                {r.notes.length > 8 ? r.notes.slice(0, 8) + '…' : r.notes}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     )

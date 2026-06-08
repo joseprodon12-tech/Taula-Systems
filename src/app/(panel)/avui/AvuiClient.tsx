@@ -103,33 +103,33 @@ export default function AvuiClient({ reserves, selectedDate, today, dots, restau
       <div className="flex-1 min-w-0">
 
         {/* Capçalera */}
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-6">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-3 mb-2">
               <button
                 onClick={() => goDay(-1)}
-                className="p-1 rounded-lg hover:bg-white transition-colors"
+                className="p-1.5 rounded-lg hover:bg-white transition-colors"
                 style={{ color: 'var(--text-muted)' }}
                 title={t('avui.anteriorDia')}
               >
-                <ChevronLeft size={18} />
+                <ChevronLeft size={22} />
               </button>
-              <h1 className="text-lg font-bold" style={{ color: 'var(--text)' }}>
+              <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>
                 {formatDateHeader(selectedDate)}
               </h1>
               <button
                 onClick={() => goDay(1)}
-                className="p-1 rounded-lg hover:bg-white transition-colors"
+                className="p-1.5 rounded-lg hover:bg-white transition-colors"
                 style={{ color: 'var(--text-muted)' }}
                 title={t('avui.seguent')}
               >
-                <ChevronRight size={18} />
+                <ChevronRight size={22} />
               </button>
             </div>
 
             {/* KPIs */}
             {active.length > 0 ? (
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              <p style={{ fontSize: 15, color: 'var(--text-muted)' }}>
                 <span className="font-semibold" style={{ color: 'var(--text)' }}>{active.length}</span>
                 {' '}{active.length === 1 ? t('avui.reserva') : t('avui.reserves')}
                 {' · '}
@@ -139,7 +139,7 @@ export default function AvuiClient({ reserves, selectedDate, today, dots, restau
                 {soparPax > 0 && <> · <span style={{ color: 'var(--text)' }}>{soparPax}{t('avui.pSopar')}</span></>}
               </p>
             ) : (
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('avui.sense')}</p>
+              <p style={{ fontSize: 15, color: 'var(--text-muted)' }}>{t('avui.sense')}</p>
             )}
           </div>
 
@@ -195,6 +195,7 @@ export default function AvuiClient({ reserves, selectedDate, today, dots, restau
             }
             onReservationClick={(id) => router.push(`/reserva/${id}`)}
             onReservationMove={handleReservationMove}
+            onWarning={(msg) => show(msg, 'error')}
           />
         )}
       </div>
@@ -240,19 +241,33 @@ export default function AvuiClient({ reserves, selectedDate, today, dots, restau
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function Section({ title, reserves }: { title: string; reserves: Reservation[] }) {
+  const byHour: Record<string, Reservation[]> = {}
+  for (const r of reserves) {
+    if (!byHour[r.time]) byHour[r.time] = []
+    byHour[r.time].push(r)
+  }
+  const hours = Object.keys(byHour).sort()
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-3">
-        <span className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--text-muted)' }}>
+        <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#1E293B' }}>
           {title}
         </span>
         <div className="flex-1 border-t" style={{ borderColor: 'var(--border)' }} />
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-muted)' }}>
           {reserves.reduce((s, r) => s + r.party_size, 0)}p
         </span>
       </div>
-      <div className="space-y-3">
-        {reserves.map(r => <ReservationCard key={r.id} reservation={r} />)}
+      <div className="space-y-4">
+        {hours.map(hour => (
+          <div key={hour}>
+            <p style={{ fontSize: 17, fontWeight: 700, color: '#1E293B', marginBottom: 8 }}>{hour}</p>
+            <div className="space-y-2">
+              {byHour[hour].map(r => <ReservationCard key={r.id} reservation={r} />)}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

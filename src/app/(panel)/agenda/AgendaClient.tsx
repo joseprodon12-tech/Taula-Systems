@@ -62,7 +62,6 @@ export default function AgendaClient({ monday, today, reservationsByDay }: Props
     const dayLabel = `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${dd}`
     const all = reservationsByDay[iso] ?? []
     const rsvs = all.filter(r => r.status !== 'cancelled')
-    const pax  = rsvs.reduce((s, r) => s + r.party_size, 0)
     return { iso, dayLabel, rsvs, isPast: iso < today, isToday: iso === today }
   })
 

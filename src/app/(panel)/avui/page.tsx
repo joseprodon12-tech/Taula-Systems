@@ -1,4 +1,4 @@
-import { getOrCreateRestaurant } from '@/app/actions/config'
+import { getRestaurant } from '@/app/actions/config'
 import { getReservationsForDay, getCalendarDots } from '@/app/actions/reservations'
 import { getTables } from '@/app/actions/tables'
 import AvuiClient from './AvuiClient'
@@ -13,7 +13,7 @@ export default async function AvuiPage({ searchParams }: Props) {
   const today = new Date().toISOString().split('T')[0]
   const selectedDate = dateParam ?? today
 
-  const restaurant = await getOrCreateRestaurant()
+  const { restaurant } = await getRestaurant()
 
   const [reserves, dots, tables] = await Promise.all([
     getReservationsForDay(restaurant.id, selectedDate),

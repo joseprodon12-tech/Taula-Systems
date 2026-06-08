@@ -93,3 +93,35 @@ body {
 .label { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
 .section-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
 .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+/* ── Landing page tokens ── */
+/* --accent / --accent-h / --accent-light: shared, no conflict with panel */
+:root {
+  --accent:       #C4472A;
+  --accent-h:     #A83923;
+  --accent-light: #FAE8E4;
+}
+
+/* Scoped overrides: only active inside .landing-page wrapper */
+.landing-page {
+  --surface: #F5F0EB;
+  --border:  #E5DDD5;
+  --muted:   #6B6560;
+  background: #FAFAF9;
+  color: #1A1A18;
+}
+
+/* Rotating words animation (hero section) */
+@keyframes rword {
+  0%   { opacity: 0; transform: translateY(10px); }
+  5%   { opacity: 1; transform: translateY(0); }
+  28%  { opacity: 1; transform: translateY(0); }
+  33%  { opacity: 0; transform: translateY(-10px); }
+  100% { opacity: 0; }
+}
+
+/* Step connector pulse (Com funciona section) */
+@keyframes flow-pulse {
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 1; }
+}

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Toast, useToast } from '@/components/ui/Toast'
 import TimeWheelPicker from '@/components/TimeWheelPicker'
 import DatePicker from '@/components/DatePicker'
-import { createReservation, updateReservation, getAvailableSlotsForDate, getReservationsForDay } from '@/app/actions/reservations'
+import { createReservation, updateReservation, getAvailableSlotsForDate, getReservationsForDay, getCustomerHistory } from '@/app/actions/reservations'
 import { useT } from '@/context/LocaleContext'
 import type { Restaurant, Reservation, Table } from '@/db/schema'
 
@@ -23,6 +23,12 @@ function addMinutesToTime(time: string, minutes: number): string {
   const [h, m] = time.split(':').map(Number)
   const total = h * 60 + m + minutes
   return `${Math.floor(total / 60).toString().padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`
+}
+
+function formatShortDate(iso: string): string {
+  const MESOS = ['gen', 'feb', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'des']
+  const [, m, d] = iso.split('-').map(Number)
+  return `${d} ${MESOS[m - 1]}`
 }
 
 function defaultDuration(restaurant: Restaurant, time: string): number {
@@ -71,8 +77,15 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
     { table_number: string | null; time: string; duration_minutes: number; id: string }[]
   >([])
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [customerHistory, setCustomerHistory] = useState<{ visits: number; lastDate: string; recentNote: string | null } | null>(null)
 
   const hasOutdoor = restaurant.capacity_outdoor > 0
+
+  async function handlePhoneBlur() {
+    if (phone.trim().length < 6) { setCustomerHistory(null); return }
+    const h = await getCustomerHistory(phone.trim())
+    setCustomerHistory(h)
+  }
 
   function handleDateChange(newDate: string) {
     setDate(newDate)
@@ -367,11 +380,29 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
               className="input"
               placeholder={t('reserva.camps.telefon')}
               value={phone}
-              onChange={e => setPhone(e.target.value)}
+              onChange={e => { setPhone(e.target.value); setCustomerHistory(null) }}
+              onBlur={handlePhoneBlur}
               style={{ borderColor: errors.customer_phone ? 'var(--state-noshow)' : undefined }}
             />
           </label>
           {errors.customer_phone && <p className="text-xs mt-1" style={{ color: 'var(--state-noshow)' }}>{errors.customer_phone}</p>}
+          {customerHistory && (
+            <div style={{
+              marginTop: 8, padding: '10px 12px',
+              background: '#EEF2FF', border: '1.5px solid #C7D2FE', borderRadius: 8,
+            }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', marginBottom: customerHistory.recentNote ? 4 : 0 }}>
+                {customerHistory.visits === 1 ? '1a visita' : `${customerHistory.visits}a visita`}
+                {' · '}
+                <span style={{ fontWeight: 400 }}>última vegada el {formatShortDate(customerHistory.lastDate)}</span>
+              </p>
+              {customerHistory.recentNote && (
+                <p style={{ fontSize: 12, color: '#4338CA' }}>
+                  Nota anterior: {customerHistory.recentNote}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Fila 5: Email (opcional) */}

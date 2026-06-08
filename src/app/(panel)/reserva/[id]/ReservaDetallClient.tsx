@@ -15,6 +15,12 @@ const STATUS_BADGE: Record<string, string> = {
   cancelled: 'badge-cancel',
 }
 
+function formatShortDate(iso: string): string {
+  const MESOS = ['gen', 'feb', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'des']
+  const [, m, d] = iso.split('-').map(Number)
+  return `${d} ${MESOS[m - 1]}`
+}
+
 function formatDate(iso: string, il: string): string {
   const [y, m, d] = iso.split('-').map(Number)
   const date = new Date(y, m - 1, d)
@@ -26,9 +32,10 @@ function formatDate(iso: string, il: string): string {
 interface Props {
   reservation: Reservation
   tables: Table[]
+  customerHistory: { visits: number; lastDate: string; recentNote: string | null } | null
 }
 
-export default function ReservaDetallClient({ reservation, tables }: Props) {
+export default function ReservaDetallClient({ reservation, tables, customerHistory }: Props) {
   const router = useRouter()
   const { t, locale } = useT()
   const { toast, hide } = useToast()
@@ -89,17 +96,21 @@ export default function ReservaDetallClient({ reservation, tables }: Props) {
 
       {/* Hero: hora i pax */}
       <div className="card mb-4" style={{ padding: '20px 24px' }}>
-        <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>
-          {reservation.time}
-          <span style={{ color: 'var(--text-muted)', fontSize: 20, fontWeight: 400, margin: '0 8px' }}>→</span>
-          {endTime}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>
+            {reservation.time}
+            <span style={{ color: 'var(--text-muted)', fontSize: 20, fontWeight: 400, margin: '0 8px' }}>→</span>
+            {endTime}
+          </div>
+          <span style={{ fontSize: 22, fontWeight: 600, color: 'var(--text)' }}>{reservation.customer_name}</span>
         </div>
         <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--primary)', marginTop: 6 }}>
           ×{reservation.party_size} {t('reserva.camps.persones').toLowerCase()}
           <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> · {sectionLabel}</span>
-          {reservation.table_number && (
-            <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> · {t('reserva.camps.taula')} {reservation.table_number}</span>
-          )}
+          {reservation.table_number
+            ? <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> · {t('reserva.camps.taula')} {reservation.table_number}</span>
+            : <span style={{ color: '#B45309', fontWeight: 400, fontSize: 14 }}> · <span style={{ fontSize: 24 }}>⚠</span> Sense taula assignada</span>
+          }
         </div>
       </div>
 
@@ -126,8 +137,6 @@ export default function ReservaDetallClient({ reservation, tables }: Props) {
 
       {/* Dades del client */}
       <div className="card mb-4">
-        <Row label={t('reserva.camps.nom')} value={reservation.customer_name} />
-        <div className="divider" />
         <Row
           label={t('reserva.camps.telefon')}
           value={
@@ -138,6 +147,24 @@ export default function ReservaDetallClient({ reservation, tables }: Props) {
         />
         <div className="divider" />
         <Row label={t('reserva.camps.email')} value={reservation.customer_email || '—'} />
+        {customerHistory && customerHistory.visits > 1 && (
+          <>
+            <div className="divider" />
+            <div style={{ padding: '4px 0' }}>
+              <span style={{
+                display: 'inline-block', padding: '3px 10px', borderRadius: 20,
+                background: '#EEF2FF', color: 'var(--primary)', fontSize: 12, fontWeight: 600,
+              }}>
+                {customerHistory.visits}a visita · última el {formatShortDate(customerHistory.lastDate)}
+              </span>
+              {customerHistory.recentNote && (
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+                  Nota anterior: {customerHistory.recentNote}
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Detalls de la reserva */}

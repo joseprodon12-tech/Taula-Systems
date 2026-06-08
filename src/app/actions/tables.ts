@@ -1,18 +1,8 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { Table, Restaurant } from '@/db/schema'
-
-async function getAuthRestaurant() {
-  const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error('No autenticat')
-  const { data: restaurant, error } = await supabase
-    .from('restaurants').select('*').eq('owner_id', user.id).single()
-  if (error) throw error
-  return { supabase, restaurant: restaurant as Restaurant }
-}
+import { getAuthRestaurant } from '@/lib/auth'
+import type { Table } from '@/db/schema'
 
 export async function getTables(restaurantId: string): Promise<Table[]> {
   const { supabase } = await getAuthRestaurant()
@@ -33,7 +23,8 @@ export async function createTable(restaurantId: string, data: {
 }): Promise<{ id: string } | { error: string }> {
   if (!data.number.trim()) return { error: 'El número de taula és obligatori' }
 
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, role } = await getAuthRestaurant()
+  if (role !== 'owner') return { error: 'Sense permisos' }
 
   const { data: existing } = await supabase
     .from('tables')
@@ -62,7 +53,9 @@ export async function updateTable(id: string, data: {
 }): Promise<{ ok: true } | { error: string }> {
   if (!data.number.trim()) return { error: 'El número de taula és obligatori' }
 
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, role } = await getAuthRestaurant()
+  if (role !== 'owner') return { error: 'Sense permisos' }
+
   const { error } = await supabase.from('tables').update({
     number: data.number.trim(),
     section: data.section,
@@ -75,7 +68,9 @@ export async function updateTable(id: string, data: {
 }
 
 export async function deleteTable(id: string): Promise<{ ok: true } | { error: string }> {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, role } = await getAuthRestaurant()
+  if (role !== 'owner') return { error: 'Sense permisos' }
+
   const { error } = await supabase.from('tables').delete().eq('id', id)
   if (error) return { error: 'Error en eliminar la taula' }
   revalidatePath('/config')

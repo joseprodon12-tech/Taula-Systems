@@ -1,52 +1,12 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getAuthRestaurant } from '@/lib/auth'
 import type { WeeklyHours, Restaurant } from '@/db/schema'
 
-async function getAuthRestaurant() {
-  const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error('No autenticat')
-
-  const { data: restaurant, error } = await supabase
-    .from('restaurants')
-    .select('*')
-    .eq('owner_id', user.id)
-    .single()
-
-  if (error && error.code !== 'PGRST116') throw error
-
-  return { supabase, user, restaurant: restaurant as Restaurant | null }
-}
-
-export async function getOrCreateRestaurant(): Promise<Restaurant> {
-  const { supabase, user, restaurant } = await getAuthRestaurant()
-  if (restaurant) return restaurant
-
-  const slug = `restaurant-${user.id.substring(0, 8)}`
-  const { data, error } = await supabase.from('restaurants').insert({
-    slug,
-    name: 'El meu restaurant',
-    owner_id: user.id,
-    primary_color: '#C17B2F',
-    capacity_indoor: 30,
-    capacity_outdoor: 0,
-    default_duration_lunch_min: 90,
-    default_duration_dinner_min: 110,
-    group_threshold: 6,
-    weekly_hours: {
-      '0': { closed: true },
-      '1': { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
-      '2': { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
-      '3': { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
-      '4': { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
-      '5': { lunch: ['13:00', '16:00'], dinner: ['20:00', '23:00'] },
-      '6': { lunch: ['13:00', '16:30'], dinner: ['20:00', '23:30'] },
-    },
-  }).select().single()
-  if (error) throw error
-  return data as Restaurant
+export async function getRestaurant(): Promise<{ restaurant: Restaurant; role: 'owner' | 'staff' }> {
+  const { restaurant, role } = await getAuthRestaurant()
+  return { restaurant, role }
 }
 
 export async function saveRestaurantInfo(id: string, data: {
@@ -59,7 +19,9 @@ export async function saveRestaurantInfo(id: string, data: {
   welcome_message: string
   whatsapp_number: string
 }) {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, role } = await getAuthRestaurant()
+  if (role !== 'owner') return { error: 'Sense permisos' }
+
   const { error } = await supabase.from('restaurants').update({
     name: data.name,
     phone: data.phone || null,
@@ -76,7 +38,9 @@ export async function saveRestaurantInfo(id: string, data: {
 }
 
 export async function saveWeeklyHours(id: string, weekly_hours: WeeklyHours) {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, role } = await getAuthRestaurant()
+  if (role !== 'owner') return { error: 'Sense permisos' }
+
   const { error } = await supabase.from('restaurants').update({
     weekly_hours,
     updated_at: new Date().toISOString(),
@@ -86,7 +50,9 @@ export async function saveWeeklyHours(id: string, weekly_hours: WeeklyHours) {
 }
 
 export async function saveCapacity(id: string, capacity_indoor: number, capacity_outdoor: number) {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, role } = await getAuthRestaurant()
+  if (role !== 'owner') return { error: 'Sense permisos' }
+
   const { error } = await supabase.from('restaurants').update({
     capacity_indoor,
     capacity_outdoor,
@@ -97,7 +63,9 @@ export async function saveCapacity(id: string, capacity_indoor: number, capacity
 }
 
 export async function saveDurations(id: string, lunch: number, dinner: number) {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, role } = await getAuthRestaurant()
+  if (role !== 'owner') return { error: 'Sense permisos' }
+
   const { error } = await supabase.from('restaurants').update({
     default_duration_lunch_min: lunch,
     default_duration_dinner_min: dinner,
@@ -119,7 +87,9 @@ export async function getClosures(restaurantId: string) {
 }
 
 export async function addClosure(restaurantId: string, date: string, reason: string) {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, role } = await getAuthRestaurant()
+  if (role !== 'owner') return { error: 'Sense permisos' }
+
   const { error } = await supabase.from('closures').insert({
     restaurant_id: restaurantId,
     date,
@@ -130,7 +100,9 @@ export async function addClosure(restaurantId: string, date: string, reason: str
 }
 
 export async function removeClosure(id: string) {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, role } = await getAuthRestaurant()
+  if (role !== 'owner') return { error: 'Sense permisos' }
+
   const { error } = await supabase.from('closures').delete().eq('id', id)
   if (error) throw error
   revalidatePath('/config')
