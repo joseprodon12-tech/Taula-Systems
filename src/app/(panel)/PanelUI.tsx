@@ -4,7 +4,7 @@ import type { ElementType, ReactNode } from 'react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Plus, Settings, LayoutDashboard, CalendarDays, ChevronLeft } from 'lucide-react'
+import { Plus, Settings, LayoutDashboard, CalendarDays, ChevronLeft, Users } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
 import type { TKey } from '@/lib/i18n'
 
@@ -18,6 +18,7 @@ interface NavItem { href: string; icon: ElementType; labelKey: TKey }
 const BASE_NAV: NavItem[] = [
   { href: '/avui',   icon: LayoutDashboard, labelKey: 'nav.avui'   },
   { href: '/agenda', icon: CalendarDays,    labelKey: 'nav.agenda' },
+  { href: '/equip',  icon: Users,           labelKey: 'nav.equip'  },
 ]
 const OWNER_NAV: NavItem[] = [
   { href: '/config', icon: Settings, labelKey: 'nav.config' },

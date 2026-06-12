@@ -19,6 +19,9 @@
   --block-pending:  #2E5BFF;
   --block-arrived:  #10B981;
   --block-standby:  #64748B;
+
+  --warning:        #B45309;
+  --warning-bg:     #FEF3C7;
 }
 
 * { box-sizing: border-box; }
@@ -93,6 +96,7 @@ body {
 .badge-noshow   { background: #FEF2F2; color: var(--state-noshow); }
 .badge-cancel   { background: #F5F3FF; color: var(--state-cancel); }
 .badge-standby  { background: #FEF9C3; color: #854D0E; }
+.badge-draft    { background: transparent; color: var(--text-muted); border: 1.5px dashed var(--border); }
 
 /* ── Misc ── */
 .label { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
