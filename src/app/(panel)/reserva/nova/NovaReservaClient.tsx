@@ -94,7 +94,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
     startTransition(async () => {
       const [newSlots, dayRes] = await Promise.all([
         getAvailableSlotsForDate(newDate),
-        getReservationsForDay(restaurant.id, newDate),
+        getReservationsForDay(newDate),
       ])
       setSlots(newSlots)
       setDayReservations(dayRes.map(r => ({
@@ -147,7 +147,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           return
         }
         if (result.warning) show(result.warning, 'error')
-        router.push(`/avui?data=${date}`)
+        router.push(`/avui?data=${date}&created=1`)
       }
     })
   }
@@ -184,7 +184,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         <button
           onClick={() => { if (window.history.length > 1) router.back(); else router.push('/avui') }}
           className="btn btn-ghost btn-sm"
-          style={{ padding: '6px 8px' }}
+          style={{ padding: '6px 8px', border: '1px solid var(--border)' }}
         >
           {t('reserva.tornar')}
         </button>
@@ -194,7 +194,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         {initialTableId && !edit && (() => {
           const t2 = tables.find(t => t.id === initialTableId)
           return t2 ? (
-            <span className="badge" style={{ background: '#EEF2FF', color: 'var(--primary)', fontWeight: 600 }}>
+            <span className="badge" style={{ background: 'var(--primary-soft)', color: 'var(--primary)', fontWeight: 600 }}>
               {t('reserva.taulaLabel')} {t2.number}
             </span>
           ) : null
@@ -236,40 +236,36 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           {errors.time && <p className="text-xs mt-1" style={{ color: 'var(--state-noshow)' }}>{errors.time}</p>}
         </div>
 
-        {/* Hora de sortida */}
+        {/* Durada estimada */}
         {endTime && (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '12px 16px', marginBottom: 20,
-            background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 8,
-          }}>
-            <div>
-              <p style={{
-                fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
-                textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 2,
-              }}>
-                {t('reserva.camps.horaSortida')}
+          <div style={{ padding: '12px 16px', marginBottom: 20, background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                Durada estimada
               </p>
-              <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>
-                {endTime}
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                fins a les <strong style={{ color: 'var(--text)' }}>{endTime}</strong>
               </p>
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
                 style={{ minWidth: 44, minHeight: 44 }}
                 onClick={() => setDurationMinutes(d => Math.max(30, d - 15))}
               >
-                −15
+                −15 min
               </button>
+              <span style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
+                {durationMinutes} min
+              </span>
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
                 style={{ minWidth: 44, minHeight: 44 }}
                 onClick={() => setDurationMinutes(d => Math.min(240, d + 15))}
               >
-                +15
+                +15 min
               </button>
             </div>
           </div>
@@ -389,7 +385,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           {customerHistory && (
             <div style={{
               marginTop: 8, padding: '10px 12px',
-              background: '#EEF2FF', border: '1.5px solid #C7D2FE', borderRadius: 8,
+              background: 'var(--primary-soft)', border: '1.5px solid var(--border)', borderRadius: 8,
             }}>
               <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', marginBottom: customerHistory.recentNote ? 4 : 0 }}>
                 {customerHistory.visits === 1 ? '1a visita' : `${customerHistory.visits}a visita`}
@@ -480,6 +476,13 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           )}
           </label>
 
+          {tables.length > 0 && (
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+              <span style={{ color: 'var(--state-noshow)', marginRight: 4 }}>●</span>Ocupada
+              <span style={{ marginLeft: 12, color: 'var(--state-arrived)', marginRight: 4 }}>●</span>Disponible
+            </p>
+          )}
+
           {/* Capacity warning */}
           {(() => {
             const sel = tables.find(tb => tb.id === tableId)
@@ -539,7 +542,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           style={{ width: '100%' }}
           disabled={pending || (!edit && closed)}
         >
-          {pending ? '...' : t('reserva.guardar')}
+          {pending ? 'Guardant...' : t('reserva.guardar')}
         </button>
       </form>
 

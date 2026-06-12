@@ -35,6 +35,14 @@ interface Props {
   customerHistory: { visits: number; lastDate: string; recentNote: string | null } | null
 }
 
+function getStatusStyle(s: string, active: boolean): React.CSSProperties {
+  if (!active) return {}
+  if (s === 'pending')  return { background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1' }
+  if (s === 'arrived')  return { background: '#ECFDF5', color: '#047857', border: '1px solid #6EE7B7' }
+  if (s === 'no_show')  return { background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FECACA' }
+  return {}
+}
+
 export default function ReservaDetallClient({ reservation, tables, customerHistory }: Props) {
   const router = useRouter()
   const { t, locale } = useT()
@@ -76,7 +84,7 @@ export default function ReservaDetallClient({ reservation, tables, customerHisto
         <button
           onClick={() => { if (window.history.length > 1) router.back(); else router.push('/avui') }}
           className="btn btn-ghost btn-sm"
-          style={{ padding: '6px 8px' }}
+          style={{ padding: '6px 8px', border: '1px solid var(--border)' }}
         >
           <ChevronLeft size={16} />
           {t('reserva.tornar')}
@@ -147,15 +155,18 @@ export default function ReservaDetallClient({ reservation, tables, customerHisto
         />
         <div className="divider" />
         <Row label={t('reserva.camps.email')} value={reservation.customer_email || '—'} />
-        {customerHistory && customerHistory.visits > 1 && (
+        {customerHistory && customerHistory.visits >= 1 && (
           <>
             <div className="divider" />
             <div style={{ padding: '4px 0' }}>
               <span style={{
                 display: 'inline-block', padding: '3px 10px', borderRadius: 20,
-                background: '#EEF2FF', color: 'var(--primary)', fontSize: 12, fontWeight: 600,
+                background: 'var(--primary-soft)', color: 'var(--primary)', fontSize: 12, fontWeight: 600,
               }}>
-                {customerHistory.visits}a visita · última el {formatShortDate(customerHistory.lastDate)}
+                {customerHistory.visits === 1
+                  ? 'Primera visita'
+                  : `${customerHistory.visits}a visita · última el ${formatShortDate(customerHistory.lastDate)}`
+                }
               </span>
               {customerHistory.recentNote && (
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
@@ -188,10 +199,10 @@ export default function ReservaDetallClient({ reservation, tables, customerHisto
             {(['pending', 'arrived', 'no_show'] as const).map(s => (
               <button
                 key={s}
-                className={`btn btn-sm ${status === s ? 'btn-primary' : 'btn-ghost'}`}
+                className={`btn btn-sm ${status === s ? '' : 'btn-ghost'}`}
                 onClick={() => handleStatusChange(s)}
                 disabled={pending}
-                style={{ minHeight: 44, flex: 1 }}
+                style={{ minHeight: 44, flex: 1, ...getStatusStyle(s, status === s) }}
               >
                 {t(`reserva.estats.${s}` as Parameters<typeof t>[0])}
               </button>

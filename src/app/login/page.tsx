@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
@@ -101,6 +102,11 @@ export default function LoginPage() {
                   background: '#FAFAF9',
                 }}
               />
+              <div style={{ textAlign: 'right', marginTop: 6 }}>
+                <Link href="/auth/reset" style={{ fontSize: 13, color: '#6B6560', textDecoration: 'none' }}>
+                  He oblidat la contrasenya?
+                </Link>
+              </div>
             </div>
 
             {error && (

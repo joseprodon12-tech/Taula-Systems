@@ -116,9 +116,9 @@ function currentTimeStr(): string {
 // standby + unassigned (no table_number) → dark slate; no_show → translucent red
 function blockBg(r: Reservation): string {
   if (r.status === 'no_show')  return 'rgba(220,50,50,0.30)'
-  if (r.status === 'arrived')  return '#10B981'
-  if (r.status === 'standby' || !r.table_number) return '#64748B'
-  return '#2E5BFF'
+  if (r.status === 'arrived')  return 'var(--block-arrived)'
+  if (r.status === 'standby' || !r.table_number) return 'var(--block-standby)'
+  return 'var(--block-pending)'
 }
 function blockFg(r: Reservation): string {
   return r.status === 'no_show' ? '#7F1D1D' : '#fff'

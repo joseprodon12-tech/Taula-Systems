@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import BookingWidget from '@/components/BookingWidget'
-import type { Restaurant } from '@/db/schema'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,14 +10,16 @@ interface Props {
 
 export default async function WidgetPage({ params }: Props) {
   const { slug } = await params
+  // Service role: Server Component, never exposed to client. Anon key removed so
+  // public_read_restaurant RLS policy can be dropped without breaking the widget.
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
   const { data: restaurant, error } = await supabase
     .from('restaurants')
-    .select('*')
+    .select('id, name, welcome_message, logo_url, address, city, weekly_hours, group_threshold')
     .eq('slug', slug)
     .single()
 
@@ -45,7 +46,7 @@ export default async function WidgetPage({ params }: Props) {
             </p>
           )}
         </div>
-        <BookingWidget restaurant={restaurant as Restaurant} />
+        <BookingWidget restaurant={restaurant} />
       </div>
     </main>
   )

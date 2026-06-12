@@ -186,9 +186,9 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
     startTransition(async () => {
       if (!tableSheet) return
       if (tableSheet.mode === 'add') {
-        const result = await createTable(restaurant.id, tableForm)
+        const result = await createTable(tableForm)
         if ('error' in result) { show(result.error, 'error'); return }
-        const fresh = await import('@/app/actions/tables').then(m => m.getTables(restaurant.id))
+        const fresh = await import('@/app/actions/tables').then(m => m.getTables())
         setTableList(fresh)
       } else {
         const result = await updateTable(tableSheet.table.id, tableForm)
@@ -310,7 +310,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
               <div style={{ ...row, cursor: 'pointer' }} onClick={() => setExpandedDay(isExpanded ? null : key)}>
                 <span style={lbl}>{label}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 13, color: isClosed ? 'var(--text-muted)' : '#10B981' }}>
+                  <span style={{ fontSize: 13, color: isClosed ? 'var(--text-muted)' : 'var(--block-arrived)' }}>
                     {isClosed ? t('config.horaris.tancat') : t('config.horaris.obert')}
                   </span>
                   {isExpanded

@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
-import { Phone, FileText, Users, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Phone, FileText, Users, CheckCircle, XCircle, RotateCcw, ChevronRight } from 'lucide-react'
 import { updateReservationStatus } from '@/app/actions/reservations'
 import { useT } from '@/context/LocaleContext'
 import type { Reservation } from '@/db/schema'
@@ -30,16 +30,11 @@ export default function ReservationCard({ reservation: r }: Props) {
   const isActionable = r.status === 'pending' || r.status === 'arrived' || r.status === 'no_show'
 
   return (
-    <Link
-      href={`/reserva/${r.id}`}
+    <div
       className="block card hover:shadow-sm transition-shadow"
       style={{ opacity: isPending ? 0.6 : 1, transition: 'opacity 0.15s' }}
-      onClick={e => {
-        const target = e.target as HTMLElement
-        if (target.closest('button')) e.preventDefault()
-      }}
     >
-      {/* Top row: nom + pax + badge */}
+      {/* Top row: nom + pax + badge + detall */}
       <div className="flex items-start justify-between gap-2 mb-1">
         <div className="flex items-center gap-3">
           <span className="text-lg font-bold" style={{ color: 'var(--text)' }}>
@@ -54,9 +49,18 @@ export default function ReservationCard({ reservation: r }: Props) {
             }
           </div>
         </div>
-        <span className={`badge ${STATUS_CSS[r.status]} shrink-0`}>
-          {t(`reserva.estats.${r.status}` as Parameters<typeof t>[0])}
-        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          <span className={`badge ${STATUS_CSS[r.status]}`}>
+            {t(`reserva.estats.${r.status}` as Parameters<typeof t>[0])}
+          </span>
+          <Link
+            href={`/reserva/${r.id}`}
+            className="btn btn-ghost btn-sm"
+            style={{ padding: '4px 8px', color: 'var(--text-muted)' }}
+          >
+            <ChevronRight size={14} />
+          </Link>
+        </div>
       </div>
 
       {/* Hora */}
@@ -105,8 +109,8 @@ export default function ReservationCard({ reservation: r }: Props) {
               onClick={() => setStatus('pending')}
               style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)', minHeight: 44 }}
             >
-              <Clock size={13} />
-              {t('reserva.accions.marcarPendent')}
+              <RotateCcw size={13} />
+              Desfer
             </button>
           )}
           {r.status !== 'no_show' && (
@@ -127,12 +131,12 @@ export default function ReservationCard({ reservation: r }: Props) {
               onClick={() => setStatus('pending')}
               style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)', minHeight: 44 }}
             >
-              <Clock size={13} />
-              {t('reserva.accions.marcarPendent')}
+              <RotateCcw size={13} />
+              Desfer
             </button>
           )}
         </div>
       )}
-    </Link>
+    </div>
   )
 }

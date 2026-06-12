@@ -3,14 +3,15 @@
 import { revalidatePath } from 'next/cache'
 import { getAvailableSlots } from '@/lib/schedule'
 import { getAuthRestaurant } from '@/lib/auth'
+import { todayISO } from '@/lib/dates'
 import type { Reservation } from '@/db/schema'
 
-export async function getReservationsForDay(restaurantId: string, date: string): Promise<Reservation[]> {
-  const { supabase } = await getAuthRestaurant()
+export async function getReservationsForDay(date: string): Promise<Reservation[]> {
+  const { supabase, restaurant } = await getAuthRestaurant()
   const { data, error } = await supabase
     .from('reservations')
     .select('*')
-    .eq('restaurant_id', restaurantId)
+    .eq('restaurant_id', restaurant.id)
     .eq('date', date)
     .order('time')
     .order('created_at')
@@ -22,25 +23,25 @@ export async function updateReservationStatus(
   id: string,
   status: 'pending' | 'arrived' | 'no_show' | 'cancelled',
 ) {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, restaurant } = await getAuthRestaurant()
   const { error } = await supabase
     .from('reservations')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', id)
+    .eq('restaurant_id', restaurant.id)
   if (error) throw error
   revalidatePath('/avui')
 }
 
 export async function getReservationsForWeek(
-  restaurantId: string,
   from: string,
   to: string,
 ): Promise<Record<string, Reservation[]>> {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, restaurant } = await getAuthRestaurant()
   const { data, error } = await supabase
     .from('reservations')
     .select('*')
-    .eq('restaurant_id', restaurantId)
+    .eq('restaurant_id', restaurant.id)
     .gte('date', from)
     .lte('date', to)
     .order('date')
@@ -55,12 +56,12 @@ export async function getReservationsForWeek(
   return map
 }
 
-export async function getCalendarDots(restaurantId: string, from: string, to: string) {
-  const { supabase } = await getAuthRestaurant()
+export async function getCalendarDots(from: string, to: string) {
+  const { supabase, restaurant } = await getAuthRestaurant()
   const { data, error } = await supabase
     .from('reservations')
     .select('date, party_size, status')
-    .eq('restaurant_id', restaurantId)
+    .eq('restaurant_id', restaurant.id)
     .gte('date', from)
     .lte('date', to)
   if (error) throw error
@@ -109,13 +110,12 @@ export async function createReservation(data: {
 
   const { supabase, restaurant } = await getAuthRestaurant()
 
-  // Check for table overlap before inserting
-  if (data.table_number) {
-    const hour = parseInt(data.time.split(':')[0])
-    const isLunchSlot = hour >= 12 && hour < 17
-    const resolvedDuration = data.duration_minutes
-      ?? (isLunchSlot ? restaurant.default_duration_lunch_min : restaurant.default_duration_dinner_min)
+  const hour = parseInt(data.time.split(':')[0])
+  const isLunch = hour >= 12 && hour < 17
+  const duration = data.duration_minutes
+    ?? (isLunch ? restaurant.default_duration_lunch_min : restaurant.default_duration_dinner_min)
 
+  if (data.table_number) {
     const { data: tableConflicts } = await supabase
       .from('reservations')
       .select('time, duration_minutes')
@@ -127,7 +127,7 @@ export async function createReservation(data: {
     if (tableConflicts && tableConflicts.length > 0) {
       const [rh, rm] = data.time.split(':').map(Number)
       const rStart = rh * 60 + rm
-      const rEnd = rStart + resolvedDuration
+      const rEnd = rStart + duration
       const hasConflict = tableConflicts.some((c: { time: string; duration_minutes: number }) => {
         const [ch, cm] = c.time.split(':').map(Number)
         const cStart = ch * 60 + cm
@@ -157,19 +157,13 @@ export async function createReservation(data: {
     ? `⚠️ ${sectionLabel} té ${occupiedPax}/${capacity} places ocupades — reserva guardada igualment`
     : undefined
 
-  const hour = parseInt(data.time.split(':')[0])
-  const isLunch = hour >= 12 && hour < 17
-  const defaultDuration = isLunch
-    ? restaurant.default_duration_lunch_min
-    : restaurant.default_duration_dinner_min
-
   const { data: newRes, error } = await supabase.from('reservations').insert({
     restaurant_id: restaurant.id,
     date: data.date,
     time: data.time,
     party_size: data.party_size,
     section: data.section,
-    duration_minutes: data.duration_minutes ?? defaultDuration,
+    duration_minutes: duration,
     customer_name: data.customer_name.trim(),
     customer_phone: data.customer_phone.trim(),
     customer_email: data.customer_email?.trim() || null,
@@ -206,7 +200,7 @@ export async function updateReservation(
     return { error: 'Comprova els camps obligatoris' }
   }
 
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, restaurant } = await getAuthRestaurant()
   const { error } = await supabase.from('reservations').update({
     date: data.date,
     time: data.time,
@@ -219,7 +213,9 @@ export async function updateReservation(
     notes: data.notes?.trim() || null,
     table_number: data.table_number?.trim() || null,
     updated_at: new Date().toISOString(),
-  }).eq('id', id)
+  })
+    .eq('id', id)
+    .eq('restaurant_id', restaurant.id)
 
   if (error) return { error: 'Error en actualitzar la reserva' }
 
@@ -230,21 +226,23 @@ export async function updateReservation(
 }
 
 export async function cancelReservation(id: string): Promise<{ ok: true }> {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, restaurant } = await getAuthRestaurant()
   await supabase.from('reservations')
     .update({ status: 'cancelled', updated_at: new Date().toISOString() })
     .eq('id', id)
+    .eq('restaurant_id', restaurant.id)
   revalidatePath('/avui')
   revalidatePath('/reserva/' + id)
   return { ok: true }
 }
 
 export async function getReservationById(id: string): Promise<Reservation | null> {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, restaurant } = await getAuthRestaurant()
   const { data, error } = await supabase
     .from('reservations')
     .select('*')
     .eq('id', id)
+    .eq('restaurant_id', restaurant.id)
     .single()
   if (error) return null
   return data as Reservation
@@ -255,15 +253,42 @@ export async function moveReservation(
   tableId: string,
   newTime: string,
 ): Promise<{ ok: true } | { error: string }> {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, restaurant } = await getAuthRestaurant()
 
-  const { data: table, error: tableError } = await supabase
-    .from('tables')
-    .select('number, section')
-    .eq('id', tableId)
-    .single()
+  const [{ data: table, error: tableError }, { data: reservation }] = await Promise.all([
+    supabase.from('tables').select('number, section').eq('id', tableId).eq('restaurant_id', restaurant.id).single(),
+    supabase.from('reservations').select('date, duration_minutes').eq('id', id).eq('restaurant_id', restaurant.id).single(),
+  ])
 
   if (tableError || !table) return { error: 'Taula no trobada' }
+  if (!reservation) return { error: 'Reserva no trobada' }
+
+  const hour = parseInt(newTime.split(':')[0])
+  const isLunch = hour >= 12 && hour < 17
+  const duration = reservation.duration_minutes
+    ?? (isLunch ? restaurant.default_duration_lunch_min : restaurant.default_duration_dinner_min)
+
+  const { data: conflicts } = await supabase
+    .from('reservations')
+    .select('time, duration_minutes')
+    .eq('restaurant_id', restaurant.id)
+    .eq('date', reservation.date)
+    .eq('table_number', table.number)
+    .in('status', ['pending', 'arrived', 'standby'])
+    .neq('id', id)
+
+  if (conflicts && conflicts.length > 0) {
+    const [rh, rm] = newTime.split(':').map(Number)
+    const rStart = rh * 60 + rm
+    const rEnd = rStart + duration
+    const hasConflict = conflicts.some((c: { time: string; duration_minutes: number }) => {
+      const [ch, cm] = c.time.split(':').map(Number)
+      const cStart = ch * 60 + cm
+      const cEnd = cStart + (c.duration_minutes || 90)
+      return rStart < cEnd && rEnd > cStart
+    })
+    if (hasConflict) return { error: `La taula ${table.number} ja té una reserva en aquest horari` }
+  }
 
   const { error } = await supabase
     .from('reservations')
@@ -274,6 +299,7 @@ export async function moveReservation(
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
+    .eq('restaurant_id', restaurant.id)
 
   if (error) return { error: 'Error en moure la reserva' }
 
@@ -305,18 +331,17 @@ export async function getCustomerHistory(phone: string): Promise<{
 }
 
 export async function getOccupiedTableNumbers(
-  restaurantId: string,
   date: string,
   time: string,
   durationMinutes: number,
   excludeReservationId?: string,
 ): Promise<string[]> {
-  const { supabase } = await getAuthRestaurant()
+  const { supabase, restaurant } = await getAuthRestaurant()
 
   const { data } = await supabase
     .from('reservations')
     .select('id, table_number, time, duration_minutes')
-    .eq('restaurant_id', restaurantId)
+    .eq('restaurant_id', restaurant.id)
     .eq('date', date)
     .in('status', ['pending', 'arrived', 'standby'])
     .not('table_number', 'is', null)

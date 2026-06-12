@@ -1,10 +1,11 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, CalendarDays, Plus, List, LayoutGrid } from 'lucide-react'
 import ReservationCard from '@/components/ReservationCard'
 import MiniCalendar from '@/components/MiniCalendar'
+import DatePicker from '@/components/DatePicker'
 import GanttView from '@/components/GanttView'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { moveReservation } from '@/app/actions/reservations'
@@ -66,11 +67,20 @@ export default function AvuiClient({ reserves, selectedDate, today, dots, restau
     return label
   }
 
+  const searchParams = useSearchParams()
   const [view, setView] = useState<'list' | 'gantt'>('list')
+  const [showCalendar, setShowCalendar] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('taula_view') as 'list' | 'gantt' | null
     if (saved) setView(saved)
+  }, [])
+
+  useEffect(() => {
+    if (searchParams.get('created') === '1') {
+      show('Reserva creada', 'success')
+      router.replace(`/avui?data=${selectedDate}`, { scroll: false })
+    }
   }, [])
 
   function handleViewChange(v: 'list' | 'gantt') {
@@ -145,9 +155,16 @@ export default function AvuiClient({ reserves, selectedDate, today, dots, restau
 
           {/* Controls dreta */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Botó calendari — només visible en mòbil */}
+            <button
+              className="btn btn-ghost btn-sm md:hidden"
+              style={{ padding: '6px 8px' }}
+              onClick={() => setShowCalendar(true)}
+            >
+              <CalendarDays size={16} />
+            </button>
             {selectedDate !== today && (
               <button className="btn btn-ghost btn-sm" onClick={() => router.push('/avui')}>
-                <CalendarDays size={13} />
                 {t('avui.avuiLabel')}
               </button>
             )}
@@ -223,15 +240,37 @@ export default function AvuiClient({ reserves, selectedDate, today, dots, restau
         </div>
       </aside>
 
-      {/* ── FAB "+" ── */}
+      {/* ── FAB "Nova reserva" ── */}
       <button
         onClick={() => router.push(`/reserva/nova?data=${selectedDate}`)}
-        className="fixed bottom-20 right-5 md:bottom-6 md:right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
-        style={{ background: 'var(--primary)', color: '#fff' }}
-        title={t('reserva.nova')}
+        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 flex items-center gap-2 btn btn-primary btn-lg shadow-lg rounded-full"
+        style={{ paddingLeft: 20, paddingRight: 24 }}
       >
-        <Plus size={22} />
+        <Plus size={20} />
+        <span>{t('reserva.nova')}</span>
       </button>
+
+      {/* ── Bottom sheet calendari (mòbil) ── */}
+      {showCalendar && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            style={{ background: 'rgba(0,0,0,0.4)' }}
+            onClick={() => setShowCalendar(false)}
+          />
+          <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl p-6 pb-8" style={{ background: 'var(--bg)' }}>
+            <div className="w-10 h-1 rounded mx-auto mb-4" style={{ background: 'var(--border)' }} />
+            <DatePicker
+              inline
+              value={selectedDate}
+              onChange={(date) => {
+                router.push(`/avui?data=${date}`)
+                setShowCalendar(false)
+              }}
+            />
+          </div>
+        </>
+      )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hide} />}
     </div>
@@ -277,7 +316,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   const { t } = useT()
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: '#EEF2FF' }}>
+      <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: 'var(--primary-soft)' }}>
         <CalendarDays size={28} style={{ color: 'var(--primary)' }} />
       </div>
       <p className="font-semibold mb-1" style={{ color: 'var(--text)' }}>{t('avui.sense')}</p>

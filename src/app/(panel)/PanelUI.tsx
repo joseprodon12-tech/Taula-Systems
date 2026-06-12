@@ -52,7 +52,7 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
           gap: isExpanded ? 12 : 0,
           justifyContent: isExpanded ? 'flex-start' : 'center',
           padding: isExpanded ? '8px 12px' : '10px 0',
-          ...(active ? { background: '#EEF2FF', color: 'var(--primary)' } : { color: 'var(--text-muted)' }),
+          ...(active ? { background: 'var(--primary-soft)', color: 'var(--primary)' } : { color: 'var(--text-muted)' }),
         }}
         title={!isExpanded ? t(tKey) : undefined}
       >

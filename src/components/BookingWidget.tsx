@@ -2,11 +2,19 @@
 /* eslint-disable react-hooks/static-components */
 
 import { useState } from 'react'
-import type { Restaurant } from '@/db/schema'
+import type { WeeklyHours } from '@/db/schema'
 import { getAvailableSlots } from '@/lib/schedule'
+import { todayISO } from '@/lib/dates'
+
+interface PublicRestaurant {
+  id: string
+  name: string
+  group_threshold: number
+  weekly_hours: WeeklyHours
+}
 
 interface Props {
-  restaurant: Restaurant
+  restaurant: PublicRestaurant
 }
 
 interface BookingData {
@@ -48,7 +56,7 @@ export default function BookingWidget({ restaurant }: Props) {
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     const timeSlots = localDate ? getAvailableSlots(restaurant.weekly_hours, localDate) : []
-    const today = new Date().toISOString().split('T')[0]
+    const today = todayISO()
 
     function handleContinue() {
       const e: Record<string, string> = {}
@@ -243,8 +251,6 @@ export default function BookingWidget({ restaurant }: Props) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             restaurant_id: restaurant.id,
-            restaurant_name: restaurant.name,
-            whatsapp_number: restaurant.whatsapp_number,
             date: data.date,
             time: data.time,
             party_size: data.party_size,

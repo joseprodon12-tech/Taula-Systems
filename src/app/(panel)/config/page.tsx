@@ -9,7 +9,7 @@ export default async function ConfigPage() {
 
   const [closureList, tableList] = await Promise.all([
     getClosures(restaurant.id),
-    getTables(restaurant.id),
+    getTables(),
   ])
   return <ConfigClient restaurant={restaurant} closures={closureList} tables={tableList} />
 }

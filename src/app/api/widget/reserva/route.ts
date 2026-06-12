@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getAvailableSlots } from '@/lib/schedule'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const {
-      restaurant_id, restaurant_name, whatsapp_number,
+      restaurant_id,
       date, time, party_size, customer_name, customer_phone,
       allergies, special_occasion,
     } = body
@@ -14,10 +15,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Falten camps obligatoris' }, { status: 400 })
     }
 
+    const pax = Number(party_size)
+    if (!Number.isInteger(pax) || pax < 1 || pax > 50) {
+      return NextResponse.json({ error: 'Nombre de persones no vàlid' }, { status: 400 })
+    }
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
+
+    // Always read restaurant config from DB — never trust client-supplied name/whatsapp
+    const { data: restaurant, error: restError } = await supabase
+      .from('restaurants')
+      .select('*')
+      .eq('id', restaurant_id)
+      .single()
+
+    if (restError || !restaurant) {
+      return NextResponse.json({ error: 'Restaurant no trobat' }, { status: 404 })
+    }
+
+    // Validate slot against weekly_hours
+    const availableSlots = getAvailableSlots(restaurant.weekly_hours, date)
+    if (!availableSlots.includes(time)) {
+      return NextResponse.json({ error: 'Hora no disponible' }, { status: 400 })
+    }
+
+    // Validate closure
+    const { data: closure } = await supabase
+      .from('closures')
+      .select('id')
+      .eq('restaurant_id', restaurant_id)
+      .eq('date', date)
+      .maybeSingle()
+
+    if (closure) {
+      return NextResponse.json({ error: 'El restaurant és tancat aquest dia' }, { status: 400 })
+    }
 
     const { data: allTables } = await supabase
       .from('tables')
@@ -33,9 +68,15 @@ export async function POST(request: NextRequest) {
       .in('status', ['pending', 'arrived', 'standby'])
       .not('table_number', 'is', null)
 
+    const hour = parseInt(time.split(':')[0])
+    const isLunch = hour >= 12 && hour < 17
+    const duration = isLunch
+      ? (restaurant.default_duration_lunch_min ?? 90)
+      : (restaurant.default_duration_dinner_min ?? 90)
+
     const [rh, rm] = time.split(':').map(Number)
     const rStart = rh * 60 + rm
-    const rEnd = rStart + 90
+    const rEnd = rStart + duration
 
     const occupiedNumbers = new Set(
       (existingRes || [])
@@ -49,7 +90,7 @@ export async function POST(request: NextRequest) {
     )
 
     const assignedTable = (allTables || []).find(
-      t => t.capacity >= Number(party_size) && !occupiedNumbers.has(t.number)
+      t => t.capacity >= pax && !occupiedNumbers.has(t.number)
     )
 
     const assignedStatus = assignedTable ? 'pending' : 'standby'
@@ -59,9 +100,9 @@ export async function POST(request: NextRequest) {
       restaurant_id,
       date,
       time,
-      party_size: Number(party_size),
+      party_size: pax,
       section: assignedTable?.section ?? 'indoor',
-      duration_minutes: 90,
+      duration_minutes: duration,
       customer_name,
       customer_phone,
       allergies: allergies || [],
@@ -81,7 +122,7 @@ export async function POST(request: NextRequest) {
       const authToken = process.env.TWILIO_AUTH_TOKEN
       const from = process.env.TWILIO_WHATSAPP_FROM
 
-      if (accountSid && authToken && from && whatsapp_number) {
+      if (accountSid && authToken && from && restaurant.whatsapp_number) {
         const twilio = (await import('twilio')).default
         const client = twilio(accountSid, authToken)
 
@@ -97,7 +138,7 @@ export async function POST(request: NextRequest) {
         await client.messages.create({
           from,
           to: `whatsapp:${toNumber}`,
-          body: `🍽️ *${restaurant_name}*\n\nHola ${customer_name}! La teva reserva ha estat rebuda.\n\n📅 ${formattedDate}\n🕐 ${time}h\n👥 ${party_size} ${Number(party_size) === 1 ? 'persona' : 'persones'}\n\nEn 24 hores rebràs un recordatori. Si necessites canviar, respon a aquest missatge.`,
+          body: `🍽️ *${restaurant.name}*\n\nHola ${customer_name}! La teva reserva ha estat rebuda.\n\n📅 ${formattedDate}\n🕐 ${time}h\n👥 ${pax} ${pax === 1 ? 'persona' : 'persones'}\n\nEn 24 hores rebràs un recordatori. Si necessites canviar, respon a aquest missatge.`,
         })
       }
     } catch (twilioError) {

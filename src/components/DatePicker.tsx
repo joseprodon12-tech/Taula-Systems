@@ -20,9 +20,10 @@ interface Props {
   error?: boolean
   dropUp?: boolean
   style?: React.CSSProperties
+  inline?: boolean
 }
 
-export default function DatePicker({ value, onChange, error, dropUp, style }: Props) {
+export default function DatePicker({ value, onChange, error, dropUp, style, inline }: Props) {
   const today = new Date()
   const selected = parseISO(value)
   const { locale, t } = useT()
@@ -92,33 +93,8 @@ export default function DatePicker({ value, onChange, error, dropUp, style }: Pr
     ? `${String(selected.getDate()).padStart(2, '0')}/${String(selected.getMonth() + 1).padStart(2, '0')}/${selected.getFullYear()}`
     : ''
 
-  return (
-    <div ref={containerRef} style={{ position: 'relative', ...style }}>
-      {/* Trigger button styled as input */}
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="input"
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          textAlign: 'left', cursor: 'pointer', width: '100%',
-          borderColor: error ? 'var(--state-noshow)' : open ? 'var(--primary)' : undefined,
-          color: displayValue ? 'var(--text)' : 'var(--text-muted)',
-        }}
-      >
-        <span style={{ fontSize: 14 }}>{displayValue || 'DD/MM/AAAA'}</span>
-        <CalendarDays size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-      </button>
-
-      {/* Calendar popup */}
-      {open && (
-        <div style={{
-          position: 'absolute', ...(dropUp ? { bottom: 'calc(100% + 8px)' } : { top: 'calc(100% + 8px)' }), left: 0, zIndex: 50,
-          background: 'var(--bg)', border: '1.5px solid var(--border)',
-          borderRadius: 14, padding: '20px 20px 16px',
-          boxShadow: '0 12px 40px rgba(0,0,0,0.16)',
-          minWidth: 380,
-        }}>
+  const calendarContent = (
+    <>
           {/* Month navigation */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <button
@@ -184,6 +160,45 @@ export default function DatePicker({ value, onChange, error, dropUp, style }: Pr
               {t('common.avui')}
             </button>
           </div>
+    </>
+  )
+
+  if (inline) {
+    return (
+      <div style={style}>
+        {calendarContent}
+      </div>
+    )
+  }
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', ...style }}>
+      {/* Trigger button styled as input */}
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="input"
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          textAlign: 'left', cursor: 'pointer', width: '100%',
+          borderColor: error ? 'var(--state-noshow)' : open ? 'var(--primary)' : undefined,
+          color: displayValue ? 'var(--text)' : 'var(--text-muted)',
+        }}
+      >
+        <span style={{ fontSize: 14 }}>{displayValue || 'DD/MM/AAAA'}</span>
+        <CalendarDays size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+      </button>
+
+      {/* Calendar popup */}
+      {open && (
+        <div style={{
+          position: 'absolute', ...(dropUp ? { bottom: 'calc(100% + 8px)' } : { top: 'calc(100% + 8px)' }), left: 0, zIndex: 50,
+          background: 'var(--bg)', border: '1.5px solid var(--border)',
+          borderRadius: 14, padding: '20px 20px 16px',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.16)',
+          minWidth: 380,
+        }}>
+          {calendarContent}
         </div>
       )}
     </div>

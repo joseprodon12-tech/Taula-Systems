@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
+import { addDays, getMondayISO } from '@/lib/dates'
 import type { Reservation } from '@/db/schema'
 
 const STATUS_BADGE: Record<string, string> = {
@@ -10,20 +11,7 @@ const STATUS_BADGE: Record<string, string> = {
   arrived:   'badge-arrived',
   no_show:   'badge-noshow',
   cancelled: 'badge-cancel',
-}
-
-function addDays(iso: string, n: number): string {
-  const [y, m, d] = iso.split('-').map(Number)
-  const date = new Date(y, m - 1, d + n)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-function getMondayISO(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number)
-  const date = new Date(y, m - 1, d)
-  const diff = date.getDay() === 0 ? -6 : 1 - date.getDay()
-  date.setDate(date.getDate() + diff)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  standby:   'badge-standby',
 }
 
 interface Props {

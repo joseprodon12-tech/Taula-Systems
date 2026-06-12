@@ -1,6 +1,7 @@
 import { getRestaurant } from '@/app/actions/config'
 import { getAvailableSlotsForDate, getReservationById } from '@/app/actions/reservations'
 import { getTables } from '@/app/actions/tables'
+import { todayISO } from '@/lib/dates'
 import NovaReservaClient from './NovaReservaClient'
 
 interface Props {
@@ -9,14 +10,14 @@ interface Props {
 
 export default async function NovaReservaPage({ searchParams }: Props) {
   const { data: dateParam, editar: editarId, hora: horaParam, taula: taulaParam } = await searchParams
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayISO()
   const initialDate = dateParam ?? today
 
   const { restaurant } = await getRestaurant()
   const [slots, editReservation, tables] = await Promise.all([
     getAvailableSlotsForDate(initialDate),
     editarId ? getReservationById(editarId) : Promise.resolve(null),
-    getTables(restaurant.id),
+    getTables(),
   ])
 
   return (

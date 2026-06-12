@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { todayISO } from '@/lib/dates'
 
 const DIES_CA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg']
 const MESOS_CA = [
@@ -13,6 +14,7 @@ interface Props {
   dots: Record<string, { count: number; pax: number }>
   selectedDate: string
   startMonth?: { year: number; month: number }
+  onSelect?: () => void
 }
 
 function isoDate(year: number, month: number, day: number): string {
@@ -27,8 +29,7 @@ function MonthGrid({
   selectedDate: string
   onSelect: (date: string) => void
 }) {
-  const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
+  const todayStr = todayISO()
   const firstDay = new Date(year, month, 1)
   const startOffset = (firstDay.getDay() + 6) % 7
   const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -62,7 +63,7 @@ function MonthGrid({
               className="relative flex flex-col items-center justify-center rounded py-0.5 text-[12px] font-medium transition-colors"
               style={{
                 minWidth: 0,
-                background: isSelected ? 'var(--primary)' : isToday ? '#EEF2FF' : 'transparent',
+                background: isSelected ? 'var(--primary)' : isToday ? 'var(--primary-soft)' : 'transparent',
                 color: isSelected ? '#fff' : isPast ? 'var(--text-muted)' : 'var(--text)',
               }}
             >
@@ -81,7 +82,7 @@ function MonthGrid({
   )
 }
 
-export default function MiniCalendar({ dots, selectedDate, startMonth }: Props) {
+export default function MiniCalendar({ dots, selectedDate, startMonth, onSelect }: Props) {
   const router = useRouter()
   const base = startMonth ?? {
     year: new Date().getFullYear(),
@@ -99,6 +100,7 @@ export default function MiniCalendar({ dots, selectedDate, startMonth }: Props) 
 
   function handleSelect(date: string) {
     router.push(`/avui?data=${date}`)
+    onSelect?.()
   }
 
   return (
