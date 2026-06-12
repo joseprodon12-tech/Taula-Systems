@@ -69,3 +69,23 @@ export type Table = {
 }
 
 export type NewTable = Omit<Table, 'id'>
+
+export type Employee = {
+  id: string; restaurant_id: string; name: string; role_label: string
+  color: string; phone: string | null; contract_hours_week: number | null
+  sort_order: number; active: boolean; created_at: string; updated_at: string
+}
+
+export type Shift = {
+  id: string; restaurant_id: string; employee_id: string
+  date: string; start_time: string; end_time: string
+  zone: string | null; notes: string | null; published: boolean
+  created_at: string; updated_at: string
+}
+
+export type Absence = {
+  id: string; restaurant_id: string; employee_id: string
+  date_from: string; date_to: string
+  type: 'vacances' | 'baixa' | 'lliure' | 'altres'
+  notes: string | null; created_at: string
+}
