@@ -373,8 +373,9 @@ export default function EquipClient({
   function ShiftChip({ shift, isDropTarget }: { shift: Shift; isDropTarget?: boolean }) {
     const emp = employees.find(e => e.id === shift.employee_id)
     const overlap = isOverlap(shift.employee_id, shift.date)
-    const borderColor = overlap ? 'var(--state-noshow)' : 'transparent'
+    const borderColor = overlap ? 'var(--state-noshow)' : shift.published ? 'transparent' : 'rgba(255,255,255,0.55)'
     const borderStyle = shift.published ? 'solid' : 'dashed'
+    const chipOpacity = shift.published ? 1 : 0.82
 
     return (
       <div
@@ -391,7 +392,7 @@ export default function EquipClient({
           fontWeight: 600,
           cursor: role === 'owner' ? 'pointer' : 'default',
           border: `2px ${borderStyle} ${borderColor}`,
-          opacity: isDropTarget ? 0.5 : 1,
+          opacity: isDropTarget ? 0.5 : chipOpacity,
           userSelect: 'none',
           touchAction: 'none',
           lineHeight: 1.6,
@@ -622,7 +623,7 @@ export default function EquipClient({
                       <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{s.start_time}–{s.end_time}</span>
                         {s.zone && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {s.zone}</span>}
-                        {!s.published && <span className="badge badge-draft" style={{ fontSize: 10 }}>draft</span>}
+                        {!s.published && <span className="badge badge-draft" style={{ fontSize: 10 }}>{t('equip.torn.esborrany')}</span>}
                         {role === 'owner' && (
                           <button
                             className="btn btn-ghost btn-sm"

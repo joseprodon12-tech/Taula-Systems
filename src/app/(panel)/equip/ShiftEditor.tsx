@@ -107,7 +107,7 @@ export default function ShiftEditor({
           {/* Employee selector (only for new shifts — in existing shifts it's already assigned) */}
           {mode === 'new' && (
             <div>
-              <label className="label">{t('equip.empleats.nom')}</label>
+              <label className="label">{t('equip.empleats.empleat')}</label>
               <select
                 className="input"
                 value={empId}
@@ -179,14 +179,14 @@ export default function ShiftEditor({
               className="input"
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder={t('reserva.camps.notesPlaceholder')}
+              placeholder={t('equip.torn.notesPlaceholder')}
             />
           </div>
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
             <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={isPending}>
-              {t('reserva.guardar')}
+              {t('equip.torn.guardar')}
             </button>
             {onDelete && (
               <button
