@@ -212,6 +212,11 @@ export default function EquipClient({
     }
   }
 
+  function handleAddTram() {
+    if (!editor) return
+    setEditor({ mode: 'new', employeeId: editor.employeeId, date: editor.date })
+  }
+
   function handleDeleteShift(shiftId: string, date: string) {
     setEditor(null)
     const snapshot = localShifts
@@ -507,12 +512,15 @@ export default function EquipClient({
                           data-cell="1"
                           data-date={day.iso}
                           data-empid={emp.id}
-                          onClick={() => !absence && dayShifts.length === 0 && handleOpenEditor(emp.id, day.iso)}
+                          onClick={e => {
+                            if (absence || role !== 'owner') return
+                            if (!(e.target as HTMLElement).closest('[data-shiftid]')) handleOpenEditor(emp.id, day.iso)
+                          }}
                           style={{
                             flex: 1, minWidth: 100, padding: '6px 4px',
                             borderLeft: '1px solid var(--border)',
                             display: 'flex', flexDirection: 'column', gap: 2,
-                            cursor: role === 'owner' && !absence && dayShifts.length === 0 ? 'pointer' : 'default',
+                            cursor: role === 'owner' && !absence ? 'pointer' : 'default',
                             background: isTarget ? 'var(--primary-soft)' : day.iso === today ? 'rgba(217,119,6,0.03)' : 'transparent',
                             minHeight: 44,
                             position: 'relative',
@@ -751,6 +759,7 @@ export default function EquipClient({
           onDelete={editor.shift
             ? () => handleDeleteShift(editor.shift!.id, editor.shift!.date)
             : undefined}
+          onAddTram={editor.mode === 'edit' ? handleAddTram : undefined}
           onClose={() => setEditor(null)}
           isMobile={typeof window !== 'undefined' && window.innerWidth < 768}
         />

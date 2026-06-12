@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { X, Trash2 } from 'lucide-react'
+import { X, Trash2, Plus } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
 import type { Shift, Employee, WeeklyHours } from '@/db/schema'
 
@@ -26,6 +26,7 @@ interface Props {
   isPending: boolean
   onSave: (data: ShiftFormData) => void
   onDelete?: () => void
+  onAddTram?: () => void
   onClose: () => void
   isMobile: boolean
 }
@@ -42,7 +43,7 @@ function defaultTimes(date: string, wh: WeeklyHours): { start: string; end: stri
 
 export default function ShiftEditor({
   mode, employeeId, date, shift, employees, roleLabels, weeklyHours,
-  fieldErrors, isPending, onSave, onDelete, onClose, isMobile,
+  fieldErrors, isPending, onSave, onDelete, onAddTram, onClose, isMobile,
 }: Props) {
   const { t } = useT()
   const defaults = defaultTimes(date, weeklyHours)
@@ -159,6 +160,18 @@ export default function ShiftEditor({
               />
             </div>
           </div>
+
+          {/* Add second leg (edit mode only) */}
+          {mode === 'edit' && onAddTram && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={onAddTram}
+              style={{ alignSelf: 'flex-start', gap: 4 }}
+            >
+              <Plus size={13} />{t('equip.torn.afegirTram')}
+            </button>
+          )}
 
           {/* Zone */}
           <div>

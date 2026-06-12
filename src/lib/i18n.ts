@@ -131,6 +131,7 @@ const ca = {
       eliminar:         'Eliminar torn',
       solapat:          'Aquest empleat ja té un torn en aquest interval',
       esborrany:        'Esborrany',
+      afegirTram:       'Afegir tram',
     },
     avisos: {
       descans12h:     'Menys de 12 h de descans entre jornades',
@@ -335,6 +336,7 @@ const es: DeepString<typeof ca> = {
       eliminar:         'Eliminar turno',
       solapat:          'Este empleado ya tiene un turno en este intervalo',
       esborrany:        'Borrador',
+      afegirTram:       'Añadir tramo',
     },
     avisos: {
       descans12h:     'Menos de 12 h de descanso entre jornadas',
