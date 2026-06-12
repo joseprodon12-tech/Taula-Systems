@@ -12,6 +12,7 @@ import {
   duplicateWeek, publishWeek,
 } from '@/app/actions/equip'
 import ShiftEditor, { type ShiftFormData } from './ShiftEditor'
+import EmployeeDayGantt from './EmployeeDayGantt'
 import { Toast, useToast } from '@/components/ui/Toast'
 
 interface Props {
@@ -23,6 +24,8 @@ interface Props {
   calendarDots: Record<string, { count: number; pax: number }>
   weeklyHours: WeeklyHours
   role: 'owner' | 'staff'
+  vistaInicial: 'setmana' | 'dia'
+  diaInicial: string
 }
 
 type EditorState = {
@@ -37,7 +40,7 @@ const EMP_COL = 148
 
 export default function EquipClient({
   monday, today, employees, shiftsByDay, absences,
-  calendarDots, weeklyHours, role,
+  calendarDots, weeklyHours, role, vistaInicial, diaInicial,
 }: Props) {
   const router = useRouter()
   const { t, locale } = useT()
@@ -66,6 +69,10 @@ export default function EquipClient({
   const [mobileDay, setMobileDay] = useState(
     today >= monday && today <= sunday ? today : monday
   )
+
+  // View toggle state
+  const [vista, setVista] = useState<'setmana' | 'dia'>(vistaInicial)
+  const [diaGantt, setDiaGantt] = useState(diaInicial)
 
   // Week range label
   const il = locale === 'ca' ? 'ca' : 'es'
@@ -137,6 +144,17 @@ export default function EquipClient({
   const draftCount = useMemo(() => allShifts.filter(s => !s.published).length, [allShifts])
 
   const roleLabels = useMemo(() => [...new Set(employees.map(e => e.role_label))], [employees])
+
+  const diaGanttLabel = useMemo(() => {
+    const [y, m, d] = diaGantt.split('-').map(Number)
+    return new Intl.DateTimeFormat(il, { weekday: 'short', day: 'numeric', month: 'short' })
+      .format(new Date(y, m - 1, d))
+  }, [diaGantt, il])
+
+  const dayAbsences = useMemo(() =>
+    absences.filter(a => a.date_from <= diaGantt && a.date_to >= diaGantt),
+    [absences, diaGantt]
+  )
 
   // ── Action helpers ──────────────────────────────────────────────────────────
 
@@ -258,6 +276,22 @@ export default function EquipClient({
         return next
       })
     })
+  }
+
+  function goToDay(day: string) {
+    setDiaGantt(day)
+    setVista('dia')
+    router.push(`/equip?setmana=${getMondayISO(day)}&vista=dia&data=${day}`)
+  }
+
+  function switchVista(v: 'setmana' | 'dia') {
+    setVista(v)
+    if (v === 'dia') router.push(`/equip?setmana=${monday}&vista=dia&data=${diaGantt}`)
+    else router.push(`/equip?setmana=${getMondayISO(diaGantt)}`)
+  }
+
+  function navDay(delta: number) {
+    goToDay(addDays(diaGantt, delta))
   }
 
   // ── Drag handlers ───────────────────────────────────────────────────────────
@@ -444,10 +478,11 @@ export default function EquipClient({
             {days.map(day => (
               <div
                 key={day.iso}
+                onClick={() => goToDay(day.iso)}
                 style={{
                   flex: 1, minWidth: 100, padding: '6px 8px',
                   borderLeft: '1px solid var(--border)',
-                  textAlign: 'center',
+                  textAlign: 'center', cursor: 'pointer',
                 }}
               >
                 <div style={{
@@ -680,38 +715,87 @@ export default function EquipClient({
     <>
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-        <button
-          className="btn btn-ghost btn-sm"
-          style={{ padding: '0 10px' }}
-          onClick={() => router.push(`/equip?setmana=${prevMonday}`)}
-          title={t('agenda.setmanaAnterior')}
-        >
-          <ChevronLeft size={16} />
-        </button>
-
-        <div style={{ flex: 1, textAlign: 'center' }}>
-          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{rangeLabel}</span>
-        </div>
-
-        <button
-          className="btn btn-ghost btn-sm"
-          style={{ padding: '0 10px' }}
-          onClick={() => router.push(`/equip?setmana=${nextMonday}`)}
-          title={t('agenda.setmanaSeguent')}
-        >
-          <ChevronRight size={16} />
-        </button>
-
-        {todayMonday !== monday && (
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => router.push(`/equip?setmana=${todayMonday}`)}
-          >
-            {t('common.avui')}
-          </button>
+        {/* Navigation (week or day) */}
+        {vista === 'setmana' ? (
+          <>
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ padding: '0 10px' }}
+              onClick={() => router.push(`/equip?setmana=${prevMonday}`)}
+              title={t('agenda.setmanaAnterior')}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{rangeLabel}</span>
+            </div>
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ padding: '0 10px' }}
+              onClick={() => router.push(`/equip?setmana=${nextMonday}`)}
+              title={t('agenda.setmanaSeguent')}
+            >
+              <ChevronRight size={16} />
+            </button>
+            {todayMonday !== monday && (
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => router.push(`/equip?setmana=${todayMonday}`)}
+              >
+                {t('common.avui')}
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ padding: '0 10px' }}
+              onClick={() => navDay(-1)}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{diaGanttLabel.charAt(0).toUpperCase() + diaGanttLabel.slice(1)}</span>
+            </div>
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ padding: '0 10px' }}
+              onClick={() => navDay(1)}
+            >
+              <ChevronRight size={16} />
+            </button>
+            {diaGantt !== today && (
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => goToDay(today)}
+              >
+                {t('common.avui')}
+              </button>
+            )}
+          </>
         )}
 
-        {role === 'owner' && (
+        {/* View toggle Setmana | Dia */}
+        <div style={{ display: 'flex', borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <button
+            className={`btn btn-sm ${vista === 'setmana' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ borderRadius: 0, border: 'none', minHeight: 32 }}
+            onClick={() => switchVista('setmana')}
+          >
+            {t('equip.gantt.setmana')}
+          </button>
+          <button
+            className={`btn btn-sm ${vista === 'dia' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ borderRadius: 0, border: 'none', minHeight: 32, borderLeft: '1px solid var(--border)' }}
+            onClick={() => switchVista('dia')}
+          >
+            {t('equip.gantt.dia')}
+          </button>
+        </div>
+
+        {/* Owner actions (setmana only) */}
+        {vista === 'setmana' && role === 'owner' && (
           <>
             <button
               className="btn btn-secondary btn-sm"
@@ -733,9 +817,22 @@ export default function EquipClient({
         )}
       </div>
 
-      {/* ── Desktop grid ── */}
+      {/* ── Desktop view (grid or gantt) ── */}
       <div className="hidden md:block">
-        <DesktopGrid />
+        {vista === 'setmana'
+          ? <DesktopGrid />
+          : <EmployeeDayGantt
+              date={diaGantt}
+              today={today}
+              employees={employees}
+              shifts={localShifts[diaGantt] ?? []}
+              absences={dayAbsences}
+              warnings={warnings}
+              calendarDots={calendarDots[diaGantt]}
+              role={role}
+              onOpenEditor={handleOpenEditor}
+            />
+        }
       </div>
 
       {/* ── Mobile view ── */}

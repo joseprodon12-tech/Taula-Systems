@@ -5,13 +5,14 @@ import { todayISO, addDays, getMondayISO } from '@/lib/dates'
 import EquipClient from './EquipClient'
 
 interface Props {
-  searchParams: Promise<{ setmana?: string }>
+  searchParams: Promise<{ setmana?: string; vista?: string; data?: string }>
 }
 
 export default async function EquipPage({ searchParams }: Props) {
-  const { setmana } = await searchParams
+  const { setmana, vista, data } = await searchParams
   const today = todayISO()
-  const monday = setmana ?? getMondayISO(today)
+  const diaInicial = data ?? today
+  const monday = setmana ?? getMondayISO(diaInicial)
   const sunday = addDays(monday, 6)
 
   const [{ restaurant, role }, employees, shiftsByDay, absences, calendarDots] =
@@ -33,6 +34,8 @@ export default async function EquipPage({ searchParams }: Props) {
       calendarDots={calendarDots}
       weeklyHours={restaurant.weekly_hours}
       role={role}
+      vistaInicial={vista === 'dia' ? 'dia' : 'setmana'}
+      diaInicial={diaInicial}
     />
   )
 }

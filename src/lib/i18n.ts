@@ -148,6 +148,14 @@ const ca = {
       altres:   'Altres',
       afegir:   'Afegir absència',
     },
+    gantt: {
+      setmana:    'Setmana',
+      dia:        'Dia',
+      persona:    'persona',
+      persones:   'persones',
+      senseTorns: 'Cap torn aquest dia',
+      afegirTorn: 'Afegir torn',
+    },
   },
   gantt: {
     taulaBuida:  'Taula lliure',
@@ -352,6 +360,14 @@ const es: DeepString<typeof ca> = {
       lliure:   'Libre',
       altres:   'Otros',
       afegir:   'Añadir ausencia',
+    },
+    gantt: {
+      setmana:    'Semana',
+      dia:        'Día',
+      persona:    'persona',
+      persones:   'personas',
+      senseTorns: 'Sin turnos este día',
+      afegirTorn: 'Añadir turno',
     },
   },
   gantt: {
