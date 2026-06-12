@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition, useCallback, useRef } from 'react'
+import { useMemo, useState, useTransition, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, AlertTriangle, Plus } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
@@ -45,6 +45,7 @@ export default function EquipClient({
   const { toast, show: showToast, hide: hideToast } = useToast()
 
   const [localShifts, setLocalShifts] = useState(shiftsByDay)
+  useEffect(() => { setLocalShifts(shiftsByDay) }, [shiftsByDay])
   const [editor, setEditor] = useState<EditorState | null>(null)
 
   const sunday = addDays(monday, 6)
@@ -383,7 +384,7 @@ export default function EquipClient({
         onPointerUp={e => handleShiftPointerUp(e, shift)}
         style={{
           background: emp?.color ?? 'var(--text-muted)',
-          color: '#fff',
+          color: 'white',
           borderRadius: 6,
           padding: '2px 6px',
           fontSize: 11,
@@ -474,7 +475,7 @@ export default function EquipClient({
               )}
               {emps.map(emp => {
                 const weekH = empWeeklyH[emp.id] ?? 0
-                const warnWeek = hasWeeklyWarning(emp.id)
+                const warnWeek = hasWarning(emp.id)
                 return (
                   <div key={emp.id} style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
                     {/* Employee name */}
@@ -545,7 +546,7 @@ export default function EquipClient({
                       color: warnWeek ? 'var(--warning)' : 'var(--text-muted)',
                     }}
                       title={warnWeek
-                        ? warnings.filter(w => w.employeeId === emp.id && !w.date)
+                        ? warnings.filter(w => w.employeeId === emp.id)
                           .map(w => warningTitle(w.key)).join('\n')
                         : undefined}
                     >
@@ -589,7 +590,7 @@ export default function EquipClient({
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                   fontSize: 10, fontWeight: 700, gap: 1, cursor: 'pointer', border: 'none',
                   background: active ? 'var(--primary)' : 'var(--bg)',
-                  color: active ? '#fff' : day.iso === today ? 'var(--primary)' : 'var(--text-muted)',
+                  color: active ? 'white' : day.iso === today ? 'var(--primary)' : 'var(--text-muted)',
                   outline: active ? 'none' : '1px solid var(--border)',
                 }}
               >
@@ -760,7 +761,7 @@ export default function EquipClient({
         style={{
           display: 'none', position: 'fixed', zIndex: 100,
           pointerEvents: 'none',
-          background: 'var(--primary)', color: '#fff',
+          background: 'var(--primary)', color: 'white',
           borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600,
         }}
       >
