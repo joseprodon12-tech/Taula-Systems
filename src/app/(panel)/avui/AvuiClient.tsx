@@ -240,16 +240,6 @@ export default function AvuiClient({ reserves, selectedDate, today, dots, restau
         </div>
       </aside>
 
-      {/* ── FAB "Nova reserva" ── */}
-      <button
-        onClick={() => router.push(`/reserva/nova?data=${selectedDate}`)}
-        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 flex items-center gap-2 btn btn-primary btn-lg shadow-lg rounded-full"
-        style={{ paddingLeft: 20, paddingRight: 24 }}
-      >
-        <Plus size={20} />
-        <span>{t('reserva.nova')}</span>
-      </button>
-
       {/* ── Bottom sheet calendari (mòbil) ── */}
       {showCalendar && (
         <>
