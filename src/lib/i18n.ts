@@ -106,6 +106,7 @@ const ca = {
     publicar:         'Publicar setmana',
     publicats:        'torns publicats',
     esborranys:       'esborranys',
+    gestionar:        'Gestionar empleats',
     empleats: {
       titol:             'Empleats',
       afegir:            'Afegir empleat',
@@ -155,6 +156,7 @@ const ca = {
       persones:   'persones',
       senseTorns: 'Cap torn aquest dia',
       afegirTorn: 'Afegir torn',
+      tot:        'Tot',
     },
   },
   gantt: {
@@ -319,6 +321,7 @@ const es: DeepString<typeof ca> = {
     publicar:         'Publicar semana',
     publicats:        'turnos publicados',
     esborranys:       'borradores',
+    gestionar:        'Gestionar empleados',
     empleats: {
       titol:             'Empleados',
       afegir:            'Añadir empleado',
@@ -368,6 +371,7 @@ const es: DeepString<typeof ca> = {
       persones:   'personas',
       senseTorns: 'Sin turnos este día',
       afegirTorn: 'Añadir turno',
+      tot:        'Todo',
     },
   },
   gantt: {

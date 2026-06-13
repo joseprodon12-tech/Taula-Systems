@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, AlertTriangle, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, AlertTriangle, Plus, Users } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
 import { addDays, getMondayISO } from '@/lib/dates'
 import { weeklyMinutes, validateWeek } from '@/lib/labor'
@@ -50,6 +50,7 @@ export default function EquipClient({
   const [localShifts, setLocalShifts] = useState(shiftsByDay)
   useEffect(() => { setLocalShifts(shiftsByDay) }, [shiftsByDay])
   const [editor, setEditor] = useState<EditorState | null>(null)
+  const [fabOpen, setFabOpen] = useState(false)
 
   const sunday = addDays(monday, 6)
   const prevMonday = addDays(monday, -7)
@@ -65,10 +66,8 @@ export default function EquipClient({
   const [dragTarget, setDragTarget] = useState<{ date: string; empId: string } | null>(null)
   const ghostRef = useRef<HTMLDivElement | null>(null)
 
-  // Mobile: selected day
-  const [mobileDay, setMobileDay] = useState(
-    today >= monday && today <= sunday ? today : monday
-  )
+  // Mobile: selected day ('tot' = weekly overview, ISO date = day Gantt)
+  const [mobileDay, setMobileDay] = useState<string>('tot')
 
   // View toggle state
   const [vista, setVista] = useState<'setmana' | 'dia'>(vistaInicial)
@@ -147,7 +146,7 @@ export default function EquipClient({
 
   const diaGanttLabel = useMemo(() => {
     const [y, m, d] = diaGantt.split('-').map(Number)
-    return new Intl.DateTimeFormat(il, { weekday: 'short', day: 'numeric', month: 'short' })
+    return new Intl.DateTimeFormat(il, { weekday: 'short', day: 'numeric', month: 'long' })
       .format(new Date(y, m - 1, d))
   }, [diaGantt, il])
 
@@ -409,12 +408,15 @@ export default function EquipClient({
 
   // ── Render helpers ──────────────────────────────────────────────────────────
 
-  function ShiftChip({ shift, isDropTarget }: { shift: Shift; isDropTarget?: boolean }) {
+  function ShiftChip({ shift, isDropTarget, warn, overlap, warnTitle }: {
+    shift: Shift; isDropTarget?: boolean; warn?: boolean; overlap?: boolean; warnTitle?: string
+  }) {
     const emp = employees.find(e => e.id === shift.employee_id)
-    const overlap = isOverlap(shift.employee_id, shift.date)
-    const borderColor = overlap ? 'var(--state-noshow)' : shift.published ? 'transparent' : 'rgba(255,255,255,0.55)'
+    const isOvlp = overlap ?? isOverlap(shift.employee_id, shift.date)
+    const borderColor = isOvlp ? 'var(--state-noshow)' : shift.published ? 'transparent' : 'rgba(255,255,255,0.55)'
     const borderStyle = shift.published ? 'solid' : 'dashed'
     const chipOpacity = shift.published ? 1 : 0.82
+    const shiftTitle = `${shift.start_time}–${shift.end_time}${shift.zone ? ` · ${shift.zone}` : ''}${warnTitle ? `\n${warnTitle}` : ''}`
 
     return (
       <div
@@ -422,6 +424,7 @@ export default function EquipClient({
         onPointerDown={e => handleShiftPointerDown(e, shift)}
         onPointerMove={handleShiftPointerMove}
         onPointerUp={e => handleShiftPointerUp(e, shift)}
+        title={shiftTitle}
         style={{
           background: emp?.color ?? 'var(--text-muted)',
           color: 'white',
@@ -435,13 +438,18 @@ export default function EquipClient({
           userSelect: 'none',
           touchAction: 'none',
           lineHeight: 1.6,
-          whiteSpace: 'nowrap',
           overflow: 'hidden',
-          textOverflow: 'ellipsis',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 3,
         }}
-        title={`${shift.start_time}–${shift.end_time}${shift.zone ? ` · ${shift.zone}` : ''}`}
       >
-        {shift.start_time}–{shift.end_time}
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+          {shift.start_time}–{shift.end_time}
+        </span>
+        {warn && (
+          <AlertTriangle size={9} style={{ color: isOvlp ? 'var(--state-noshow)' : 'var(--warning)', flexShrink: 0 }} />
+        )}
       </div>
     )
   }
@@ -563,20 +571,15 @@ export default function EquipClient({
                         >
                           {absence && <AbsenceChip abs={absence} />}
                           {dayShifts.map(s => (
-                            <ShiftChip key={s.id} shift={s} isDropTarget={dragRef.current?.shiftId === s.id && dragRef.current?.active} />
+                            <ShiftChip
+                              key={s.id}
+                              shift={s}
+                              isDropTarget={dragRef.current?.shiftId === s.id && dragRef.current?.active}
+                              warn={dayWarn}
+                              overlap={isOverlap(emp.id, day.iso)}
+                              warnTitle={warnings.filter(w => w.employeeId === emp.id && w.date === day.iso).map(w => warningTitle(w.key)).join('\n')}
+                            />
                           ))}
-                          {dayWarn && !absence && (
-                            <span
-                              title={warnings.filter(w => w.employeeId === emp.id && w.date === day.iso)
-                                .map(w => warningTitle(w.key)).join('\n')}
-                              style={{ position: 'absolute', top: 2, right: 2, lineHeight: 1 }}
-                            >
-                              <AlertTriangle
-                                size={10}
-                                style={{ color: isOverlap(emp.id, day.iso) ? 'var(--state-noshow)' : 'var(--warning)' }}
-                              />
-                            </span>
-                          )}
                         </div>
                       )
                     })}
@@ -610,101 +613,135 @@ export default function EquipClient({
   // ── Mobile day view ─────────────────────────────────────────────────────────
 
   function MobileView() {
-    const dayShiftsAll = (localShifts[mobileDay] ?? [])
-    const [mdy, mdm, mdd] = mobileDay.split('-').map(Number)
-    const fmt = new Intl.DateTimeFormat(il, { weekday: 'long', day: 'numeric', month: 'long' })
-    const dayLabel = fmt.format(new Date(mdy, mdm - 1, mdd))
+    const chipRow = (
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, marginBottom: 12 }}>
+        {/* Tot button */}
+        <button
+          onClick={() => setMobileDay('tot')}
+          style={{
+            flexShrink: 0, width: 44, height: 48, borderRadius: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
+            background: mobileDay === 'tot' ? 'var(--primary)' : 'var(--bg)',
+            color: mobileDay === 'tot' ? 'white' : 'var(--text-muted)',
+            outline: mobileDay === 'tot' ? 'none' : '1px solid var(--border)',
+          }}
+        >
+          {t('equip.gantt.tot')}
+        </button>
+        {days.map(day => {
+          const active = day.iso === mobileDay
+          const [, , dd] = day.iso.split('-').map(Number)
+          const parts = day.label.split(' ')
+          const wd = parts[0].slice(0, 2).toUpperCase()
+          return (
+            <button
+              key={day.iso}
+              onClick={() => setMobileDay(day.iso)}
+              style={{
+                flexShrink: 0, width: 40, height: 48, borderRadius: 10,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                fontSize: 10, fontWeight: 700, gap: 1, cursor: 'pointer', border: 'none',
+                background: active ? 'var(--primary)' : 'var(--bg)',
+                color: active ? 'white' : day.iso === today ? 'var(--primary)' : 'var(--text-muted)',
+                outline: active ? 'none' : '1px solid var(--border)',
+              }}
+            >
+              <span>{wd}</span>
+              <span style={{ fontSize: 13, fontWeight: 800 }}>{dd}</span>
+            </button>
+          )
+        })}
+      </div>
+    )
+
+    // Day Gantt mode
+    if (mobileDay !== 'tot') {
+      const dayAbs = absences.filter(a => a.date_from <= mobileDay && a.date_to >= mobileDay)
+      return (
+        <div>
+          {chipRow}
+          <EmployeeDayGantt
+            date={mobileDay}
+            today={today}
+            employees={employees}
+            shifts={localShifts[mobileDay] ?? []}
+            absences={dayAbs}
+            warnings={warnings}
+            calendarDots={calendarDots[mobileDay]}
+            role={role}
+            onOpenEditor={handleOpenEditor}
+          />
+        </div>
+      )
+    }
+
+    // "Tot" mode: weekly overview cards per employee
+    const hasAnyShifts = employees.some(emp =>
+      days.some(day =>
+        (localShifts[day.iso] ?? []).some(s => s.employee_id === emp.id) ||
+        !!absenceMap[emp.id]?.[day.iso]
+      )
+    )
 
     return (
       <div>
-        {/* Day chips selector */}
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, marginBottom: 12 }}>
-          {days.map(day => {
-            const active = day.iso === mobileDay
-            const [, , dd] = day.iso.split('-').map(Number)
-            const wd = new Intl.DateTimeFormat(il, { weekday: 'short' }).format(
-              new Date(...(day.iso.split('-').map(Number) as [number, number, number]).map((v, i) => i === 1 ? v - 1 : v) as [number, number, number])
-            ).slice(0, 2).toUpperCase()
-            return (
-              <button
-                key={day.iso}
-                onClick={() => setMobileDay(day.iso)}
-                style={{
-                  flexShrink: 0, width: 40, height: 48, borderRadius: 10,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontWeight: 700, gap: 1, cursor: 'pointer', border: 'none',
-                  background: active ? 'var(--primary)' : 'var(--bg)',
-                  color: active ? 'white' : day.iso === today ? 'var(--primary)' : 'var(--text-muted)',
-                  outline: active ? 'none' : '1px solid var(--border)',
-                }}
-              >
-                <span>{wd}</span>
-                <span style={{ fontSize: 13, fontWeight: 800 }}>{dd}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>
-          {dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1)}
-        </div>
-
-        {/* Employee cards for the day */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 80 }}>
+        {chipRow}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 80 }}>
           {employees.map(emp => {
-            const shifts = dayShiftsAll.filter(s => s.employee_id === emp.id)
-            const absence = absenceMap[emp.id]?.[mobileDay]
-            if (!shifts.length && !absence) return null
+            const empDays = days.map(day => {
+              const dayShifts = (localShifts[day.iso] ?? []).filter(s => s.employee_id === emp.id)
+              const absence = absenceMap[emp.id]?.[day.iso]
+              return { day, dayShifts, absence }
+            }).filter(({ dayShifts, absence }) => dayShifts.length > 0 || !!absence)
+
+            if (empDays.length === 0) return null
+
+            const weekH = empWeeklyH[emp.id] ?? 0
+            const warnEmp = hasWarning(emp.id)
+
             return (
-              <div key={emp.id} className="card" style={{ padding: '12px 14px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: emp.color, flexShrink: 0, marginTop: 3 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{emp.name}</div>
-                  {absence
-                    ? <div style={{ fontSize: 12, color: 'var(--text-muted)' }}><AbsenceChip abs={absence} /></div>
-                    : shifts.map(s => (
-                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{s.start_time}–{s.end_time}</span>
-                        {s.zone && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {s.zone}</span>}
-                        {!s.published && <span className="badge badge-draft" style={{ fontSize: 10 }}>{t('equip.torn.esborrany')}</span>}
-                        {role === 'owner' && (
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            style={{ marginLeft: 'auto', minHeight: 24, padding: '0 6px' }}
-                            onClick={() => handleOpenEditor(emp.id, mobileDay, s)}
-                          >
-                            ···
-                          </button>
-                        )}
-                      </div>
-                    ))
-                  }
+              <div key={emp.id} className="card" style={{ padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: emp.color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', flex: 1 }}>{emp.name}</span>
+                  {weekH > 0 && (
+                    <span style={{ fontSize: 12, color: warnEmp ? 'var(--warning)' : 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+                      {weekH % 1 === 0 ? weekH : weekH.toFixed(1)}h
+                      {warnEmp && <AlertTriangle size={9} style={{ color: 'var(--warning)' }} />}
+                    </span>
+                  )}
                 </div>
+                {empDays.map(({ day, dayShifts, absence }, idx) => (
+                  <div key={day.iso} style={{
+                    display: 'flex', gap: 8, fontSize: 12,
+                    paddingTop: 5, marginTop: idx === 0 ? 0 : 3,
+                    borderTop: '1px solid var(--border)',
+                  }}>
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 600, minWidth: 44, flexShrink: 0 }}>
+                      {day.label}:
+                    </span>
+                    {absence ? (
+                      <span style={{ color: 'var(--text-muted)' }}>
+                        {t(`equip.absencies.${absence.type}` as Parameters<typeof t>[0])}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--text)' }}>
+                        {dayShifts.map(s => `${s.start_time}–${s.end_time}`).join(' · ')}
+                      </span>
+                    )}
+                  </div>
+                ))}
               </div>
             )
           })}
 
-          {dayShiftsAll.length === 0 && !employees.some(e => absenceMap[e.id]?.[mobileDay]) && (
+          {!hasAnyShifts && (
             <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: 24 }}>
               {t('avui.sense')}
             </div>
           )}
         </div>
-
-        {/* FAB */}
-        {role === 'owner' && (
-          <button
-            className="btn btn-primary"
-            style={{
-              position: 'fixed', bottom: 72, right: 20, borderRadius: '50%',
-              width: 52, height: 52, padding: 0, boxShadow: '0 4px 12px rgba(217,119,6,0.4)',
-              zIndex: 30,
-            }}
-            onClick={() => handleOpenEditor(employees[0]?.id ?? '', mobileDay)}
-          >
-            <Plus size={22} />
-          </button>
-        )}
       </div>
     )
   }
@@ -776,8 +813,18 @@ export default function EquipClient({
           </>
         )}
 
-        {/* View toggle Setmana | Dia */}
-        <div style={{ display: 'flex', borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        {/* Gestionar empleats */}
+        <button
+          className="btn btn-ghost btn-sm"
+          style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+          onClick={() => router.push('/equip/empleats')}
+        >
+          <Users size={14} />
+          {t('equip.gestionar')}
+        </button>
+
+        {/* View toggle Setmana | Dia (hidden on mobile) */}
+        <div className="hidden md:flex" style={{ borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden' }}>
           <button
             className={`btn btn-sm ${vista === 'setmana' ? 'btn-primary' : 'btn-ghost'}`}
             style={{ borderRadius: 0, border: 'none', minHeight: 32 }}
@@ -874,6 +921,59 @@ export default function EquipClient({
       >
         ✥
       </div>
+
+      {/* FAB unificat Nova reserva / Nou torn */}
+      {role === 'owner' && (
+        <>
+          {fabOpen && (
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: 39 }}
+              onClick={() => setFabOpen(false)}
+            />
+          )}
+          <div style={{ position: 'fixed', bottom: 72, right: 20, zIndex: 40, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+            {fabOpen && (
+              <div style={{
+                background: 'var(--bg)', border: '1px solid var(--border)',
+                borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                padding: '4px 0', minWidth: 160,
+              }}>
+                <button
+                  className="btn btn-ghost"
+                  style={{ width: '100%', justifyContent: 'flex-start', padding: '10px 14px', borderRadius: 0, fontSize: 13 }}
+                  onClick={() => { setFabOpen(false); router.push('/reserva/nova') }}
+                >
+                  {t('reserva.nova')}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ width: '100%', justifyContent: 'flex-start', padding: '10px 14px', borderRadius: 0, fontSize: 13 }}
+                  onClick={() => {
+                    setFabOpen(false)
+                    let date = today >= monday && today <= sunday ? today : monday
+                    if (mobileDay !== 'tot') date = mobileDay
+                    else if (vista === 'dia') date = diaGantt
+                    handleOpenEditor(employees[0]?.id ?? '', date)
+                  }}
+                >
+                  {t('equip.torn.nou')}
+                </button>
+              </div>
+            )}
+            <button
+              className="btn btn-primary"
+              style={{
+                borderRadius: '50%', width: 52, height: 52, padding: 0,
+                boxShadow: '0 4px 12px rgba(217,119,6,0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+              onClick={() => setFabOpen(f => !f)}
+            >
+              <Plus size={22} />
+            </button>
+          </div>
+        </>
+      )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </>
