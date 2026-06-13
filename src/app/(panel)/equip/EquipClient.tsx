@@ -38,6 +38,13 @@ type EditorState = {
 
 const EMP_COL = 148
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  return parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase()
+}
+
 export default function EquipClient({
   monday, today, employees, shiftsByDay, absences,
   calendarDots, weeklyHours, role, vistaInicial, diaInicial,
@@ -50,7 +57,6 @@ export default function EquipClient({
   const [localShifts, setLocalShifts] = useState(shiftsByDay)
   useEffect(() => { setLocalShifts(shiftsByDay) }, [shiftsByDay])
   const [editor, setEditor] = useState<EditorState | null>(null)
-  const [fabOpen, setFabOpen] = useState(false)
 
   const sunday = addDays(monday, 6)
   const prevMonday = addDays(monday, -7)
@@ -154,6 +160,20 @@ export default function EquipClient({
     absences.filter(a => a.date_from <= diaGantt && a.date_to >= diaGantt),
     [absences, diaGantt]
   )
+
+  // Punt 4: escolta l'event 'equip:nou-torn' enviat per PanelUI quan l'usuari toca "+ Nou torn" al FAB global
+  useEffect(() => {
+    if (role !== 'owner') return
+    function handleNouTorn() {
+      let date = today >= monday && today <= sunday ? today : monday
+      if (mobileDay !== 'tot') date = mobileDay
+      else if (vista === 'dia') date = diaGantt
+      if (employees.length === 0) return
+      setEditor({ mode: 'new', employeeId: employees[0].id, date })
+    }
+    document.addEventListener('equip:nou-torn', handleNouTorn)
+    return () => document.removeEventListener('equip:nou-torn', handleNouTorn)
+  }, [role, employees, monday, sunday, today, mobileDay, vista, diaGantt])
 
   // ── Action helpers ──────────────────────────────────────────────────────────
 
@@ -534,9 +554,10 @@ export default function EquipClient({
                       borderRight: '1px solid var(--border)',
                     }}>
                       <span style={{
-                        width: 8, height: 8, borderRadius: '50%',
-                        background: emp.color, flexShrink: 0,
-                      }} />
+                        width: 22, height: 22, borderRadius: '50%', background: emp.color, flexShrink: 0,
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 9, fontWeight: 700, color: 'white', userSelect: 'none',
+                      }}>{getInitials(emp.name)}</span>
                       <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {emp.name}
                       </span>
@@ -703,7 +724,11 @@ export default function EquipClient({
             return (
               <div key={emp.id} className="card" style={{ padding: '12px 14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: emp.color, flexShrink: 0 }} />
+                  <span style={{
+                    width: 22, height: 22, borderRadius: '50%', background: emp.color, flexShrink: 0,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 9, fontWeight: 700, color: 'white', userSelect: 'none',
+                  }}>{getInitials(emp.name)}</span>
                   <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', flex: 1 }}>{emp.name}</span>
                   {weekH > 0 && (
                     <span style={{ fontSize: 12, color: warnEmp ? 'var(--warning)' : 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -921,59 +946,6 @@ export default function EquipClient({
       >
         ✥
       </div>
-
-      {/* FAB unificat Nova reserva / Nou torn */}
-      {role === 'owner' && (
-        <>
-          {fabOpen && (
-            <div
-              style={{ position: 'fixed', inset: 0, zIndex: 39 }}
-              onClick={() => setFabOpen(false)}
-            />
-          )}
-          <div style={{ position: 'fixed', bottom: 72, right: 20, zIndex: 40, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-            {fabOpen && (
-              <div style={{
-                background: 'var(--bg)', border: '1px solid var(--border)',
-                borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                padding: '4px 0', minWidth: 160,
-              }}>
-                <button
-                  className="btn btn-ghost"
-                  style={{ width: '100%', justifyContent: 'flex-start', padding: '10px 14px', borderRadius: 0, fontSize: 13 }}
-                  onClick={() => { setFabOpen(false); router.push('/reserva/nova') }}
-                >
-                  {t('reserva.nova')}
-                </button>
-                <button
-                  className="btn btn-ghost"
-                  style={{ width: '100%', justifyContent: 'flex-start', padding: '10px 14px', borderRadius: 0, fontSize: 13 }}
-                  onClick={() => {
-                    setFabOpen(false)
-                    let date = today >= monday && today <= sunday ? today : monday
-                    if (mobileDay !== 'tot') date = mobileDay
-                    else if (vista === 'dia') date = diaGantt
-                    handleOpenEditor(employees[0]?.id ?? '', date)
-                  }}
-                >
-                  {t('equip.torn.nou')}
-                </button>
-              </div>
-            )}
-            <button
-              className="btn btn-primary"
-              style={{
-                borderRadius: '50%', width: 52, height: 52, padding: 0,
-                boxShadow: '0 4px 12px rgba(217,119,6,0.4)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-              onClick={() => setFabOpen(f => !f)}
-            >
-              <Plus size={22} />
-            </button>
-          </div>
-        </>
-      )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </>

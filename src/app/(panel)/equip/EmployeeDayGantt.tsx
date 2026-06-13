@@ -11,6 +11,13 @@ const LABEL_COL = 148
 const ROW_H = 52
 const HEADER_H = 32
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  return parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase()
+}
+
 interface Props {
   date: string
   today: string
@@ -137,14 +144,52 @@ export default function EmployeeDayGantt({
         )}
       </div>
 
-      {/* Grid */}
-      <div style={{ overflowX: 'auto' }}>
-        <div style={{ width: '100%', minWidth: LABEL_COL + 400, position: 'relative' }}>
+      {/* Grid: columna de noms fixa + zona de barres amb scroll horitzontal (Punt 5) */}
+      <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
 
-          {/* Time axis header */}
-          <div style={{ display: 'flex', height: HEADER_H, borderBottom: '2px solid var(--border)' }}>
-            <div style={{ width: LABEL_COL, flexShrink: 0 }} />
-            <div style={{ flex: 1, position: 'relative' }}>
+        {/* Columna esquerra — noms fixos, sense scroll */}
+        <div style={{ width: LABEL_COL, flexShrink: 0, borderRight: '1px solid var(--border)' }}>
+          {/* Capçalera-espai alineada amb l'eix de temps */}
+          <div style={{ height: HEADER_H, borderBottom: '2px solid var(--border)' }} />
+          {groups.map(([roleLabel, emps]) => (
+            <div key={roleLabel}>
+              {multiGroup && (
+                <div style={{
+                  background: 'var(--surface)', padding: '4px 10px',
+                  fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
+                  letterSpacing: '0.06em', borderBottom: '1px solid var(--border)',
+                  textTransform: 'uppercase', height: 28, boxSizing: 'border-box',
+                  display: 'flex', alignItems: 'center',
+                }}>
+                  {roleLabel}
+                </div>
+              )}
+              {emps.map((emp, rowIdx) => (
+                <div key={emp.id} style={{
+                  height: ROW_H, display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '0 10px', borderBottom: '1px solid var(--border)',
+                  background: rowIdx % 2 === 1 ? 'rgba(0,0,0,0.015)' : 'transparent',
+                }}>
+                  <span style={{
+                    width: 22, height: 22, borderRadius: '50%', background: emp.color, flexShrink: 0,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 9, fontWeight: 700, color: 'white', userSelect: 'none',
+                  }}>{getInitials(emp.name)}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {emp.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Columna dreta — eix de temps + barres, amb scroll horitzontal */}
+        <div style={{ flex: 1, overflowX: 'auto' }}>
+          <div style={{ minWidth: 400, position: 'relative' }}>
+
+            {/* Time axis header */}
+            <div style={{ height: HEADER_H, borderBottom: '2px solid var(--border)', position: 'relative' }}>
               {ticks.map(tick => (
                 <span key={tick} style={{
                   position: 'absolute',
@@ -156,48 +201,31 @@ export default function EmployeeDayGantt({
                 </span>
               ))}
             </div>
-          </div>
 
-          {/* Employee rows */}
-          {groups.map(([roleLabel, emps]) => (
-            <div key={roleLabel}>
-              {multiGroup && (
-                <div style={{
-                  background: 'var(--surface)', padding: '4px 10px',
-                  fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
-                  letterSpacing: '0.06em', borderBottom: '1px solid var(--border)',
-                  textTransform: 'uppercase',
-                }}>
-                  {roleLabel}
-                </div>
-              )}
-              {emps.map((emp, rowIdx) => {
-                const empShifts = shifts.filter(s => s.employee_id === emp.id)
-                const absence = absences.find(a => a.employee_id === emp.id)
-                const empWarns = warnings.filter(w => w.employeeId === emp.id && w.date === date)
-                const isOverlapRow = empWarns.some(w => w.key === 'overlap')
+            {/* Employee bar rows */}
+            {groups.map(([roleLabel, emps]) => (
+              <div key={roleLabel}>
+                {multiGroup && (
+                  <div style={{
+                    background: 'var(--surface)',
+                    height: 28, borderBottom: '1px solid var(--border)',
+                  }} />
+                )}
+                {emps.map((emp, rowIdx) => {
+                  const empShifts = shifts.filter(s => s.employee_id === emp.id)
+                  const absence = absences.find(a => a.employee_id === emp.id)
+                  const empWarns = warnings.filter(w => w.employeeId === emp.id && w.date === date)
+                  const isOverlapRow = empWarns.some(w => w.key === 'overlap')
 
-                return (
-                  <div key={emp.id} style={{
-                    display: 'flex', height: ROW_H,
-                    borderBottom: '1px solid var(--border)',
-                    background: rowIdx % 2 === 1 ? 'rgba(0,0,0,0.015)' : 'transparent',
-                  }}>
-                    {/* Employee label */}
-                    <div style={{
-                      width: LABEL_COL, flexShrink: 0,
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      padding: '0 10px', borderRight: '1px solid var(--border)',
-                    }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: emp.color, flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {emp.name}
-                      </span>
-                    </div>
-
-                    {/* Time area */}
+                  return (
                     <div
-                      style={{ flex: 1, position: 'relative', cursor: role === 'owner' && !absence ? 'pointer' : 'default' }}
+                      key={emp.id}
+                      style={{
+                        height: ROW_H, position: 'relative',
+                        borderBottom: '1px solid var(--border)',
+                        background: rowIdx % 2 === 1 ? 'rgba(0,0,0,0.015)' : 'transparent',
+                        cursor: role === 'owner' && !absence ? 'pointer' : 'default',
+                      }}
                       onClick={e => {
                         if (role !== 'owner' || absence) return
                         if ((e.target as HTMLElement).closest('[data-shiftbar]')) return
@@ -265,29 +293,29 @@ export default function EmployeeDayGantt({
                         )
                       })}
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+                  )
+                })}
+              </div>
+            ))}
 
-          {/* Current time line (amber, spans full height from header) */}
-          {nowRatio !== null && (
-            <div style={{
-              position: 'absolute',
-              left: `calc(${LABEL_COL}px + (100% - ${LABEL_COL}px) * ${nowRatio})`,
-              top: 0, bottom: 0, width: 2,
-              background: 'var(--primary)',
-              pointerEvents: 'none', zIndex: 5,
-            }}>
+            {/* Línia d'hora actual (ambre), relativa a la zona de barres */}
+            {nowRatio !== null && (
               <div style={{
-                position: 'absolute', top: 4, left: '50%',
-                transform: 'translateX(-50%)',
-                width: 8, height: 8, borderRadius: '50%',
+                position: 'absolute',
+                left: `${nowRatio * 100}%`,
+                top: 0, bottom: 0, width: 2,
                 background: 'var(--primary)',
-              }} />
-            </div>
-          )}
+                pointerEvents: 'none', zIndex: 5,
+              }}>
+                <div style={{
+                  position: 'absolute', top: 4, left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: 'var(--primary)',
+                }} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -110,6 +110,9 @@ const ca = {
     empleats: {
       titol:             'Empleats',
       afegir:            'Afegir empleat',
+      editar:            'Editar empleat',
+      crear:             'Crear empleat',
+      guardar:           'Guardar empleat',
       nom:               'Nom o àlies',
       empleat:           'Empleat',
       rol:               'Rol',
@@ -325,6 +328,9 @@ const es: DeepString<typeof ca> = {
     empleats: {
       titol:             'Empleados',
       afegir:            'Añadir empleado',
+      editar:            'Editar empleado',
+      crear:             'Crear empleado',
+      guardar:           'Guardar empleado',
       nom:               'Nombre o alias',
       empleat:           'Empleado',
       rol:               'Rol',

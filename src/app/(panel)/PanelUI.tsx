@@ -33,11 +33,19 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
   const [hovered, setHovered]   = useState(false)
   const [showSheet, setShowSheet] = useState(false)
 
-  const showFab = pathname.startsWith('/avui') || pathname.startsWith('/agenda')
+  const showFab = pathname.startsWith('/avui') || pathname.startsWith('/agenda') || pathname.startsWith('/equip')
+  // A /equip el FAB mostra també "Nou torn"; EquipClient escolta l'event 'equip:nou-torn' per obrir l'editor
+  const isEquip = pathname.startsWith('/equip')
 
   function handleNovaReserva() {
     const data = searchParams.get('data')
     router.push(data ? `/reserva/nova?data=${data}` : '/reserva/nova')
+    setShowSheet(false)
+  }
+
+  function handleNouTorn() {
+    // Punt 4: envia event al component EquipClient (qui escolta 'equip:nou-torn') per obrir el ShiftEditor
+    document.dispatchEvent(new CustomEvent('equip:nou-torn'))
     setShowSheet(false)
   }
 
@@ -181,6 +189,22 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
               <div style={{ padding: '8px 0 4px', textAlign: 'center' }}>
                 <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 12px' }} />
               </div>
+              {isEquip && (
+                <button
+                  onClick={handleNouTorn}
+                  style={{
+                    width: '100%', padding: '16px 20px',
+                    fontSize: 17, fontWeight: 600,
+                    color: 'var(--primary)',
+                    textAlign: 'center',
+                    background: 'none', border: 'none',
+                    borderBottom: '1px solid var(--border)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {t('equip.torn.nou')}
+                </button>
+              )}
               <button
                 onClick={handleNovaReserva}
                 style={{

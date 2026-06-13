@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Plus, ChevronDown, ChevronUp, Users } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, Plus, ChevronDown, ChevronUp, Users } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
 import type { Employee } from '@/db/schema'
 import {
@@ -29,8 +30,16 @@ type FormData = {
 const EMPTY_FORM: FormData = { name: '', role_label: '', color: PALETTE[0], phone: '', contract_hours_week: '' }
 const ROLE_SUGGESTIONS = ['Sala', 'Cuina', 'Barra']
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  return parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase()
+}
+
 export default function EmplatsClient({ employees: initial, role }: Props) {
   const { t } = useT()
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const { toast, show: showToast, hide: hideToast } = useToast()
 
@@ -148,7 +157,11 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
         style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: role === 'owner' ? 'pointer' : 'default' }}
         onClick={() => openEdit(emp)}
       >
-        <span style={{ width: 12, height: 12, borderRadius: '50%', background: emp.color, flexShrink: 0 }} />
+        <span style={{
+          width: 28, height: 28, borderRadius: '50%', background: emp.color, flexShrink: 0,
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 11, fontWeight: 700, color: 'white', userSelect: 'none',
+        }}>{getInitials(emp.name)}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{emp.name}</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -176,6 +189,14 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ padding: '0 8px' }}
+              onClick={() => router.push('/equip')}
+              title="← Equip"
+            >
+              <ArrowLeft size={16} />
+            </button>
             <Users size={18} style={{ color: 'var(--primary)' }} />
             <h1 className="section-title" style={{ marginBottom: 0 }}>{t('equip.empleats.titol')}</h1>
           </div>
@@ -190,7 +211,7 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
         {showForm && (
           <div className="card" style={{ marginBottom: 16 }}>
             <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: 'var(--text)' }}>
-              {editingId ? t('equip.torn.editar') : t('equip.empleats.afegir')}
+              {editingId ? t('equip.empleats.editar') : t('equip.empleats.afegir')}
             </div>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* Nom */}
@@ -286,7 +307,7 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
 
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={isPending}>
-                  {t('reserva.guardar')}
+                  {editingId ? t('equip.empleats.guardar') : t('equip.empleats.crear')}
                 </button>
                 <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)} disabled={isPending}>
                   {t('reserva.tornar')}
@@ -324,7 +345,11 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {inactive.map(emp => (
                   <div key={emp.id} className="card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, opacity: 0.6 }}>
-                    <span style={{ width: 12, height: 12, borderRadius: '50%', background: emp.color, flexShrink: 0 }} />
+                    <span style={{
+                      width: 28, height: 28, borderRadius: '50%', background: emp.color, flexShrink: 0,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11, fontWeight: 700, color: 'white', userSelect: 'none',
+                    }}>{getInitials(emp.name)}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{emp.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{emp.role_label}</div>
