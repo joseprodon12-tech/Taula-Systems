@@ -10,8 +10,9 @@ import {
   deactivateEmployee, reactivateEmployee,
 } from '@/app/actions/equip'
 import { Toast, useToast } from '@/components/ui/Toast'
+import EmpAvatar from '@/components/ui/EmpAvatar'
+import { createClient } from '@/lib/supabase/client'
 
-// 8 colors harmònics amb el tema ambre
 const PALETTE = [
   '#D97706', '#0EA5E9', '#10B981', '#8B5CF6',
   '#F43F5E', '#F97316', '#14B8A6', '#6366F1',
@@ -25,17 +26,16 @@ interface Props {
 type FormData = {
   name: string; role_label: string; color: string
   phone: string; contract_hours_week: string
+  avatar_url: string | null
 }
 
-const EMPTY_FORM: FormData = { name: '', role_label: '', color: PALETTE[0], phone: '', contract_hours_week: '' }
+const EMPTY_FORM: FormData = {
+  name: '', role_label: '', color: PALETTE[0],
+  phone: '', contract_hours_week: '',
+  avatar_url: null,
+}
 const ROLE_SUGGESTIONS = ['Sala', 'Cuina', 'Barra']
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  return parts.length >= 2
-    ? (parts[0][0] + parts[1][0]).toUpperCase()
-    : name.slice(0, 2).toUpperCase()
-}
+const MAX_AVATAR_BYTES = 512 * 1024
 
 export default function EmplatsClient({ employees: initial, role }: Props) {
   const { t } = useT()
@@ -51,12 +51,18 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
   const [confirmDeactivate, setConfirmDeactivate] = useState<string | null>(null)
   const [showInactive, setShowInactive] = useState(false)
 
+  // Avatar upload state
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+
   const active = employees.filter(e => e.active)
   const inactive = employees.filter(e => !e.active)
 
   function openCreate() {
     setEditingId(null)
     setForm(EMPTY_FORM)
+    setAvatarFile(null)
+    setAvatarPreview(null)
     setFieldErrors({})
     setShowForm(true)
   }
@@ -70,19 +76,59 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
       color: emp.color,
       phone: emp.phone ?? '',
       contract_hours_week: emp.contract_hours_week != null ? String(emp.contract_hours_week) : '',
+      avatar_url: emp.avatar_url ?? null,
     })
+    setAvatarFile(null)
+    setAvatarPreview(null)
     setFieldErrors({})
     setShowForm(true)
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > MAX_AVATAR_BYTES) {
+      showToast(t('equip.empleats.errorFotoMida'), 'error')
+      e.target.value = ''
+      return
+    }
+    setAvatarFile(file)
+    const reader = new FileReader()
+    reader.onload = ev => setAvatarPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  async function uploadAvatar(file: File): Promise<string | null> {
+    const supabase = createClient()
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    // UUID únic per evitar col·lisions; el nom anterior queda orfe al bucket (fitxers petits)
+    const path = `${crypto.randomUUID()}.${ext}`
+    const { error } = await supabase.storage
+      .from('employee-avatars')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (error) return null
+    const { data } = supabase.storage.from('employee-avatars').getPublicUrl(path)
+    return data.publicUrl
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    // Puja la foto primer (si n'hi ha) abans de la transició del server action
+    let avatarUrl: string | null = form.avatar_url
+    if (avatarFile) {
+      const url = await uploadAvatar(avatarFile)
+      if (!url) { showToast("Error pujant la imatge", 'error'); return }
+      avatarUrl = url
+    }
+
     const data = {
       name: form.name,
       role_label: form.role_label,
       color: form.color,
       phone: form.phone || undefined,
       contract_hours_week: form.contract_hours_week ? Number(form.contract_hours_week) : undefined,
+      avatar_url: avatarUrl ?? undefined,
     }
 
     if (editingId) {
@@ -93,12 +139,14 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
           color: data.color,
           phone: data.phone ?? null,
           contract_hours_week: data.contract_hours_week ?? null,
+          avatar_url: avatarUrl,
         })
         if ('error' in res) { showToast(res.error, 'error'); return }
         setEmployees(prev => prev.map(e =>
           e.id === editingId
             ? { ...e, name: data.name, role_label: data.role_label, color: data.color,
-                phone: data.phone ?? null, contract_hours_week: data.contract_hours_week ?? null }
+                phone: data.phone ?? null, contract_hours_week: data.contract_hours_week ?? null,
+                avatar_url: avatarUrl }
             : e
         ))
         setShowForm(false)
@@ -120,6 +168,7 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
           color: data.color,
           phone: data.phone ?? null,
           contract_hours_week: data.contract_hours_week ?? null,
+          avatar_url: avatarUrl,
           sort_order: employees.length,
           active: true,
           created_at: new Date().toISOString(),
@@ -157,11 +206,7 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
         style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: role === 'owner' ? 'pointer' : 'default' }}
         onClick={() => openEdit(emp)}
       >
-        <span style={{
-          width: 28, height: 28, borderRadius: '50%', background: emp.color, flexShrink: 0,
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 11, fontWeight: 700, color: 'white', userSelect: 'none',
-        }}>{getInitials(emp.name)}</span>
+        <EmpAvatar name={emp.name} color={emp.color} avatarUrl={emp.avatar_url} size={28} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{emp.name}</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -182,6 +227,9 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
       </div>
     )
   }
+
+  // Mosta la imatge (preview o URL existent) o l'avatar d'inicials com a preview
+  const previewUrl = avatarPreview ?? form.avatar_url
 
   return (
     <>
@@ -214,6 +262,50 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
               {editingId ? t('equip.empleats.editar') : t('equip.empleats.afegir')}
             </div>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+              {/* Foto (opcional) */}
+              <div>
+                <label className="label">{t('equip.empleats.foto')} <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>{t('reserva.camps.opcional')}</span></label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <EmpAvatar
+                    name={form.name || '?'}
+                    color={form.color}
+                    avatarUrl={previewUrl}
+                    size={52}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label
+                      htmlFor="avatar-upload"
+                      className="btn btn-ghost btn-sm"
+                      style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
+                    >
+                      {t('equip.empleats.canviarFoto')}
+                    </label>
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      style={{ display: 'none' }}
+                      onChange={handleFileChange}
+                    />
+                    {previewUrl && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: 12, color: 'var(--text-muted)' }}
+                        onClick={() => {
+                          setAvatarFile(null)
+                          setAvatarPreview(null)
+                          setForm(f => ({ ...f, avatar_url: null }))
+                        }}
+                      >
+                        {t('equip.empleats.eliminarFoto')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Nom */}
               <div>
                 <label className="label">{t('equip.empleats.nom')}</label>
@@ -301,7 +393,6 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
                   min={0}
                   max={168}
                   step={0.5}
-                  placeholder="40"
                 />
               </div>
 
@@ -345,11 +436,7 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {inactive.map(emp => (
                   <div key={emp.id} className="card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, opacity: 0.6 }}>
-                    <span style={{
-                      width: 28, height: 28, borderRadius: '50%', background: emp.color, flexShrink: 0,
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 700, color: 'white', userSelect: 'none',
-                    }}>{getInitials(emp.name)}</span>
+                    <EmpAvatar name={emp.name} color={emp.color} avatarUrl={emp.avatar_url} size={28} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{emp.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{emp.role_label}</div>

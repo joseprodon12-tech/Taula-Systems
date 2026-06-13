@@ -27,6 +27,7 @@ export async function createEmployee(data: {
   color: string
   phone?: string
   contract_hours_week?: number
+  avatar_url?: string
 }): Promise<{ id: string } | { error: string; fieldErrors?: Record<string, string> }> {
   const fieldErrors: Record<string, string> = {}
   if (!data.name.trim()) fieldErrors.name = 'El nom és obligatori'
@@ -56,6 +57,7 @@ export async function createEmployee(data: {
       color: data.color,
       phone: data.phone?.trim() || null,
       contract_hours_week: data.contract_hours_week ?? null,
+      avatar_url: data.avatar_url ?? null,
       sort_order: maxOrder + 1,
     })
     .select('id')
@@ -76,6 +78,7 @@ export async function updateEmployee(
     color: string
     phone: string | null
     contract_hours_week: number | null
+    avatar_url?: string | null
   },
 ): Promise<{ ok: true } | { error: string }> {
   const { supabase, restaurant, role } = await getAuthRestaurant()
@@ -89,6 +92,7 @@ export async function updateEmployee(
       color: data.color,
       phone: data.phone?.trim() || null,
       contract_hours_week: data.contract_hours_week,
+      ...(data.avatar_url !== undefined ? { avatar_url: data.avatar_url } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

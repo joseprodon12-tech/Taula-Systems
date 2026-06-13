@@ -13,6 +13,7 @@ import {
 } from '@/app/actions/equip'
 import ShiftEditor, { type ShiftFormData } from './ShiftEditor'
 import EmployeeDayGantt from './EmployeeDayGantt'
+import EmpAvatar from '@/components/ui/EmpAvatar'
 import { Toast, useToast } from '@/components/ui/Toast'
 
 interface Props {
@@ -37,13 +38,6 @@ type EditorState = {
 }
 
 const EMP_COL = 148
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  return parts.length >= 2
-    ? (parts[0][0] + parts[1][0]).toUpperCase()
-    : name.slice(0, 2).toUpperCase()
-}
 
 export default function EquipClient({
   monday, today, employees, shiftsByDay, absences,
@@ -553,11 +547,7 @@ export default function EquipClient({
                       display: 'flex', alignItems: 'center', gap: 6,
                       borderRight: '1px solid var(--border)',
                     }}>
-                      <span style={{
-                        width: 22, height: 22, borderRadius: '50%', background: emp.color, flexShrink: 0,
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 9, fontWeight: 700, color: 'white', userSelect: 'none',
-                      }}>{getInitials(emp.name)}</span>
+                      <EmpAvatar name={emp.name} color={emp.color} avatarUrl={emp.avatar_url} size={22} />
                       <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {emp.name}
                       </span>
@@ -724,11 +714,7 @@ export default function EquipClient({
             return (
               <div key={emp.id} className="card" style={{ padding: '12px 14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{
-                    width: 22, height: 22, borderRadius: '50%', background: emp.color, flexShrink: 0,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 9, fontWeight: 700, color: 'white', userSelect: 'none',
-                  }}>{getInitials(emp.name)}</span>
+                  <EmpAvatar name={emp.name} color={emp.color} avatarUrl={emp.avatar_url} size={22} />
                   <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', flex: 1 }}>{emp.name}</span>
                   {weekH > 0 && (
                     <span style={{ fontSize: 12, color: warnEmp ? 'var(--warning)' : 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>

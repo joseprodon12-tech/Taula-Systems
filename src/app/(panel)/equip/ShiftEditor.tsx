@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X, Trash2, Plus } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
 import type { Shift, Employee, WeeklyHours } from '@/db/schema'
+import EmpAvatar from '@/components/ui/EmpAvatar'
 
 export interface ShiftFormData {
   employee_id: string
@@ -125,7 +126,7 @@ export default function ShiftEditor({
           {/* Employee name (display only in edit mode) */}
           {mode === 'edit' && emp && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: emp.color, flexShrink: 0 }} />
+              <EmpAvatar name={emp.name} color={emp.color} avatarUrl={emp.avatar_url} size={22} />
               <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{emp.name}</span>
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{date}</span>
             </div>

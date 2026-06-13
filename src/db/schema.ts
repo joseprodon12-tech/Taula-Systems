@@ -73,6 +73,7 @@ export type NewTable = Omit<Table, 'id'>
 export type Employee = {
   id: string; restaurant_id: string; name: string; role_label: string
   color: string; phone: string | null; contract_hours_week: number | null
+  avatar_url: string | null
   sort_order: number; active: boolean; created_at: string; updated_at: string
 }
 

@@ -6,17 +6,11 @@ import { useT } from '@/context/LocaleContext'
 import { toMin } from '@/lib/labor'
 import type { Employee, Shift, Absence } from '@/db/schema'
 import type { LaborWarning } from '@/lib/labor'
+import EmpAvatar from '@/components/ui/EmpAvatar'
 
-const LABEL_COL = 148
+const LABEL_COL = 36   // punt 2: només avatar, sense text de nom
 const ROW_H = 52
 const HEADER_H = 32
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  return parts.length >= 2
-    ? (parts[0][0] + parts[1][0]).toUpperCase()
-    : name.slice(0, 2).toUpperCase()
-}
 
 interface Props {
   date: string
@@ -155,14 +149,9 @@ export default function EmployeeDayGantt({
             <div key={roleLabel}>
               {multiGroup && (
                 <div style={{
-                  background: 'var(--surface)', padding: '4px 10px',
-                  fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
-                  letterSpacing: '0.06em', borderBottom: '1px solid var(--border)',
-                  textTransform: 'uppercase', height: 28, boxSizing: 'border-box',
-                  display: 'flex', alignItems: 'center',
-                }}>
-                  {roleLabel}
-                </div>
+                  background: 'var(--surface)', height: 28, boxSizing: 'border-box',
+                  borderBottom: '1px solid var(--border)',
+                }} />
               )}
               {emps.map((emp, rowIdx) => (
                 <div key={emp.id} style={{
@@ -170,14 +159,7 @@ export default function EmployeeDayGantt({
                   padding: '0 10px', borderBottom: '1px solid var(--border)',
                   background: rowIdx % 2 === 1 ? 'rgba(0,0,0,0.015)' : 'transparent',
                 }}>
-                  <span style={{
-                    width: 22, height: 22, borderRadius: '50%', background: emp.color, flexShrink: 0,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 9, fontWeight: 700, color: 'white', userSelect: 'none',
-                  }}>{getInitials(emp.name)}</span>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {emp.name}
-                  </span>
+                  <EmpAvatar name={emp.name} color={emp.color} avatarUrl={emp.avatar_url} size={22} />
                 </div>
               ))}
             </div>
