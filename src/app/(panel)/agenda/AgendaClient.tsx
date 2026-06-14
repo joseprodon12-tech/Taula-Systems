@@ -1,12 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
 import { addDays, getMondayISO } from '@/lib/dates'
 import { getLunchHours, getDinnerHours } from '@/lib/schedule'
 import { moveReservation } from '@/app/actions/reservations'
 import GanttView from '@/components/GanttView'
+import MiniCalendar from '@/components/MiniCalendar'
+import DatePicker from '@/components/DatePicker'
 import ReservationCard from '@/components/ReservationCard'
 import { Toast, useToast } from '@/components/ui/Toast'
 import type { Restaurant, Table, Reservation } from '@/db/schema'
@@ -36,15 +39,17 @@ interface Props {
   tables: Table[]
   dayReservations: Reservation[]
   reservationsByDay: Record<string, Reservation[]>
+  dots: Record<string, { count: number; pax: number }>
 }
 
 export default function AgendaClient({
-  vista, today, selectedDate, restaurant, tables, dayReservations, reservationsByDay,
+  vista, today, selectedDate, restaurant, tables, dayReservations, reservationsByDay, dots,
 }: Props) {
   const router = useRouter()
   const { t, locale } = useT()
   const { toast, show, hide } = useToast()
   const il = locale === 'ca' ? 'ca' : 'es'
+  const [showCalendar, setShowCalendar] = useState(false)
 
   function switchVista(v: Vista) {
     const data = v === 'setmana' ? getMondayISO(selectedDate) : selectedDate
@@ -85,9 +90,15 @@ export default function AgendaClient({
   const todayMonday = getMondayISO(today)
   const lunchHours  = getLunchHours(restaurant.weekly_hours, selectedDate)
   const dinnerHours = getDinnerHours(restaurant.weekly_hours, selectedDate)
+  const startMonth  = { year: new Date().getFullYear(), month: new Date().getMonth() }
+
+  function navigateCalendar(date: string) {
+    router.push(`/agenda?vista=${vista === 'setmana' ? 'gantt' : vista}&data=${date}`)
+  }
 
   return (
-    <div>
+    <div className="flex gap-6">
+    <div className="flex-1 min-w-0">
       {/* ── Capçalera ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
 
@@ -170,6 +181,15 @@ export default function AgendaClient({
             )}
           </div>
         )}
+
+        {/* Botó calendari — només visible en mòbil */}
+        <button
+          className="btn btn-ghost btn-sm md:hidden"
+          style={{ padding: '6px 8px', marginLeft: 'auto' }}
+          onClick={() => setShowCalendar(true)}
+        >
+          <CalendarDays size={16} />
+        </button>
       </div>
 
       {/* ── Contingut ── */}
@@ -200,6 +220,44 @@ export default function AgendaClient({
       )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hide} />}
+    </div>
+
+    {/* ── Sidebar desktop ── */}
+    <aside className="hidden md:block w-52 shrink-0">
+      <div className="card sticky top-0" style={{ maxHeight: 'calc(100vh - 48px)', overflowY: 'auto' }}>
+        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
+          {t('avui.calendari')}
+        </p>
+        <MiniCalendar
+          dots={dots}
+          selectedDate={vista === 'setmana' ? today : selectedDate}
+          startMonth={startMonth}
+          navigate={navigateCalendar}
+        />
+      </div>
+    </aside>
+
+    {/* ── Bottom sheet calendari (mòbil) ── */}
+    {showCalendar && (
+      <>
+        <div
+          className="fixed inset-0 z-40"
+          style={{ background: 'rgba(0,0,0,0.4)' }}
+          onClick={() => setShowCalendar(false)}
+        />
+        <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl p-6 pb-8" style={{ background: 'var(--bg)' }}>
+          <div className="w-10 h-1 rounded mx-auto mb-4" style={{ background: 'var(--border)' }} />
+          <DatePicker
+            inline
+            value={vista === 'setmana' ? today : selectedDate}
+            onChange={(date) => {
+              navigateCalendar(date)
+              setShowCalendar(false)
+            }}
+          />
+        </div>
+      </>
+    )}
     </div>
   )
 }

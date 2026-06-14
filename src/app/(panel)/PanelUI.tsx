@@ -44,8 +44,12 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
   }
 
   function handleNouTorn() {
-    // Punt 4: envia event al component EquipClient (qui escolta 'equip:nou-torn') per obrir el ShiftEditor
-    document.dispatchEvent(new CustomEvent('equip:nou-torn'))
+    if (isEquip) {
+      document.dispatchEvent(new CustomEvent('equip:nou-torn'))
+    } else {
+      const data = searchParams.get('data')
+      router.push(data ? `/equip?nou-torn=1&data=${data}` : '/equip?nou-torn=1')
+    }
     setShowSheet(false)
   }
 
@@ -189,22 +193,20 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
               <div style={{ padding: '8px 0 4px', textAlign: 'center' }}>
                 <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 12px' }} />
               </div>
-              {isEquip && (
-                <button
-                  onClick={handleNouTorn}
-                  style={{
-                    width: '100%', padding: '16px 20px',
-                    fontSize: 17, fontWeight: 600,
-                    color: 'var(--primary)',
-                    textAlign: 'center',
-                    background: 'none', border: 'none',
-                    borderBottom: '1px solid var(--border)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {t('equip.torn.nou')}
-                </button>
-              )}
+              <button
+                onClick={handleNouTorn}
+                style={{
+                  width: '100%', padding: '16px 20px',
+                  fontSize: 17, fontWeight: 600,
+                  color: 'var(--primary)',
+                  textAlign: 'center',
+                  background: 'none', border: 'none',
+                  borderBottom: '1px solid var(--border)',
+                  cursor: 'pointer',
+                }}
+              >
+                {t('equip.torn.nou')}
+              </button>
               <button
                 onClick={handleNovaReserva}
                 style={{

@@ -4,24 +4,32 @@ import { useState, useEffect, useMemo } from 'react'
 import { AlertTriangle, Plus } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
 import { toMin } from '@/lib/labor'
-import type { Employee, Shift, Absence } from '@/db/schema'
+import type { Employee, Shift, Absence, ShiftWithEmployee } from '@/db/schema'
 import type { LaborWarning } from '@/lib/labor'
 import EmpAvatar from '@/components/ui/EmpAvatar'
 
-const LABEL_COL = 36   // punt 2: només avatar, sense text de nom
-const ROW_H = 52
+const LABEL_COL = 36
 const HEADER_H = 32
+
+function empGanttDimensions(empCount: number): { rowH: number } {
+  if (empCount <= 5)  return { rowH: 64 }
+  if (empCount <= 10) return { rowH: 52 }
+  if (empCount <= 20) return { rowH: 40 }
+  return                     { rowH: 32 }
+}
+
+type EmpData = Pick<Employee, 'id' | 'name' | 'role_label' | 'color' | 'avatar_url'>
 
 interface Props {
   date: string
-  today: string
-  employees: Employee[]
-  shifts: Shift[]
-  absences: Absence[]
-  warnings: LaborWarning[]
+  shifts: ShiftWithEmployee[]
+  today?: string
+  employees?: Employee[]          // for employees with absences but no shifts on this day
+  absences?: Absence[]
+  warnings?: LaborWarning[]
   calendarDots?: { count: number; pax: number }
-  role: 'owner' | 'staff'
-  onOpenEditor: (employeeId: string, date: string, shift?: Shift) => void
+  role?: 'owner' | 'staff'
+  onOpenEditor?: (employeeId: string, date: string, shift?: Shift) => void
 }
 
 function normEndMin(startTime: string, endTime: string): number {
@@ -35,10 +43,13 @@ function fmtHour(m: number): string {
 }
 
 export default function EmployeeDayGantt({
-  date, today, employees, shifts, absences, warnings, calendarDots, role, onOpenEditor,
+  date, shifts, today = '', employees, absences = [], warnings = [],
+  calendarDots, role = 'staff', onOpenEditor,
 }: Props) {
   const { t, locale } = useT()
   const il = locale === 'ca' ? 'ca' : 'es'
+  const empCount = employees?.length ?? new Set(shifts.map(s => s.employee_id)).size
+  const { rowH: ROW_H } = empGanttDimensions(empCount)
   const [nowMin, setNowMin] = useState(-1)
 
   useEffect(() => {
@@ -52,11 +63,20 @@ export default function EmployeeDayGantt({
     return () => clearInterval(id)
   }, [date, today])
 
-  const activeEmps = useMemo(() =>
-    employees.filter(e =>
-      shifts.some(s => s.employee_id === e.id) ||
-      absences.some(a => a.employee_id === e.id)
-    ), [employees, shifts, absences])
+  // Derive unique employees from shifts + absences (with optional employees fallback for absent-only)
+  const activeEmps = useMemo<EmpData[]>(() => {
+    const map = new Map<string, EmpData>()
+    for (const s of shifts) {
+      if (!map.has(s.employee.id)) map.set(s.employee.id, s.employee)
+    }
+    for (const a of absences) {
+      if (!map.has(a.employee_id)) {
+        const emp = employees?.find(e => e.id === a.employee_id)
+        if (emp) map.set(emp.id, emp)
+      }
+    }
+    return [...map.values()]
+  }, [shifts, absences, employees])
 
   const { axisStart, axisEnd, totalMinutes } = useMemo(() => {
     const times: number[] = []
@@ -83,7 +103,7 @@ export default function EmployeeDayGantt({
   }, [date, il])
 
   const groups = useMemo(() => {
-    const map: Record<string, Employee[]> = {}
+    const map: Record<string, EmpData[]> = {}
     for (const emp of activeEmps) {
       if (!map[emp.role_label]) map[emp.role_label] = []
       map[emp.role_label].push(emp)
@@ -114,7 +134,7 @@ export default function EmployeeDayGantt({
     return (
       <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
         <div style={{ fontSize: 14, marginBottom: 16 }}>{t('equip.gantt.senseTorns')}</div>
-        {role === 'owner' && employees.length > 0 && (
+        {role === 'owner' && employees && employees.length > 0 && onOpenEditor && (
           <button className="btn btn-primary btn-sm" onClick={() => onOpenEditor(employees[0].id, date)}>
             <Plus size={14} />{t('equip.gantt.afegirTorn')}
           </button>
@@ -138,12 +158,11 @@ export default function EmployeeDayGantt({
         )}
       </div>
 
-      {/* Grid: columna de noms fixa + zona de barres amb scroll horitzontal (Punt 5) */}
+      {/* Grid: columna de noms fixa + zona de barres amb scroll horitzontal */}
       <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
 
-        {/* Columna esquerra — noms fixos, sense scroll */}
+        {/* Columna esquerra — avatars fixos, sense scroll */}
         <div style={{ width: LABEL_COL, flexShrink: 0, borderRight: '1px solid var(--border)' }}>
-          {/* Capçalera-espai alineada amb l'eix de temps */}
           <div style={{ height: HEADER_H, borderBottom: '2px solid var(--border)' }} />
           {groups.map(([roleLabel, emps]) => (
             <div key={roleLabel}>
@@ -209,7 +228,7 @@ export default function EmployeeDayGantt({
                         cursor: role === 'owner' && !absence ? 'pointer' : 'default',
                       }}
                       onClick={e => {
-                        if (role !== 'owner' || absence) return
+                        if (role !== 'owner' || absence || !onOpenEditor) return
                         if ((e.target as HTMLElement).closest('[data-shiftbar]')) return
                         onOpenEditor(emp.id, date)
                       }}
@@ -240,30 +259,39 @@ export default function EmployeeDayGantt({
                       {!absence && empShifts.map(shift => {
                         const barLeft = (toMin(shift.start_time) - axisStart) / totalMinutes * 100
                         const barWidth = (normEndMin(shift.start_time, shift.end_time) - toMin(shift.start_time)) / totalMinutes * 100
-                        const borderColor = isOverlapRow ? 'var(--state-noshow)' : shift.published ? 'transparent' : 'rgba(255,255,255,0.55)'
-                        const borderStyle = shift.published ? 'solid' : 'dashed'
+                        const barBg = shift.published ? emp.color : 'var(--draft-bg)'
+                        const barText = shift.published ? 'white' : 'var(--primary-hover)'
+                        const barBorder = isOverlapRow
+                          ? '2px dashed var(--state-noshow)'
+                          : shift.published
+                            ? '2px solid transparent'
+                            : `2px dashed ${emp.color}`
 
                         return (
                           <div
                             key={shift.id}
                             data-shiftbar={shift.id}
-                            onClick={e => { e.stopPropagation(); onOpenEditor(emp.id, date, shift) }}
+                            onClick={e => {
+                              e.stopPropagation()
+                              onOpenEditor?.(emp.id, date, shift)
+                            }}
                             title={`${shift.start_time}–${shift.end_time}${shift.notes ? ` · ${shift.notes}` : ''}`}
                             style={{
                               position: 'absolute',
                               left: `${barLeft}%`, width: `${barWidth}%`,
                               top: 10, bottom: 10,
-                              background: emp.color,
+                              background: barBg,
                               borderRadius: 6,
-                              border: `2px ${borderStyle} ${borderColor}`,
-                              opacity: shift.published ? 1 : 0.85,
+                              border: barBorder,
+                              opacity: 1,
                               display: 'flex', alignItems: 'center',
                               padding: '0 6px', overflow: 'hidden',
                               cursor: role === 'owner' ? 'pointer' : 'default',
                               boxSizing: 'border-box',
+                              transition: 'background-color 0.3s',
                             }}
                           >
-                            <span style={{ fontSize: 11, fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: barText, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {shift.start_time}–{shift.end_time}
                             </span>
                             {empWarns.length > 0 && (

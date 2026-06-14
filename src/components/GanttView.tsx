@@ -5,16 +5,20 @@ import type { Table, Reservation } from '@/db/schema'
 import { useT } from '@/context/LocaleContext'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const SLOT_MIN    = 15
-const SLOT_PX     = 40
-const PX_PER_MIN  = SLOT_PX / SLOT_MIN
-const GAP_PX      = 48
-const TABLE_COL_W        = 88
-const TABLE_COL_W_MOBILE = 60
-const ROW_H   = 64
-const HEADER_H = 36
-const SEC_H   = 26
+const SLOT_MIN       = 15
+const GAP_PX         = 48
+const HEADER_H       = 36
+const SEC_H          = 26
 const DRAG_THRESHOLD = 6
+
+function ganttDimensions(tableCount: number): {
+  rowH: number; slotPx: number; tableColW: number; tableColWMobile: number
+} {
+  if (tableCount <= 10) return { rowH: 72, slotPx: 44, tableColW: 96, tableColWMobile: 64 }
+  if (tableCount <= 20) return { rowH: 56, slotPx: 36, tableColW: 84, tableColWMobile: 56 }
+  if (tableCount <= 30) return { rowH: 44, slotPx: 32, tableColW: 76, tableColWMobile: 52 }
+  return                       { rowH: 36, slotPx: 28, tableColW: 68, tableColWMobile: 48 }
+}
 
 // ── Time helpers ───────────────────────────────────────────────────────────────
 function toMin(t: string): number {
@@ -31,14 +35,14 @@ type Seg = { startMin: number; endMin: number; offsetPx: number }
 
 const BREAK_BUFFER_MIN = 60
 
-function buildSegs(lunch: [string, string] | null, dinner: [string, string] | null): Seg[] {
+function buildSegs(lunch: [string, string] | null, dinner: [string, string] | null, pxPerMin: number): Seg[] {
   const segs: Seg[] = []
   let offset = 0
   const buf = lunch && dinner ? BREAK_BUFFER_MIN : 0
   if (lunch) {
     const [s, e] = [toMin(lunch[0]), toMin(lunch[1]) + buf]
     segs.push({ startMin: s, endMin: e, offsetPx: offset })
-    offset += (e - s) * PX_PER_MIN + GAP_PX
+    offset += (e - s) * pxPerMin + GAP_PX
   }
   if (dinner) {
     const [s, e] = [toMin(dinner[0]) - buf, toMin(dinner[1])]
@@ -47,26 +51,26 @@ function buildSegs(lunch: [string, string] | null, dinner: [string, string] | nu
   return segs
 }
 
-function totalWidth(segs: Seg[]): number {
+function totalWidth(segs: Seg[], pxPerMin: number): number {
   if (!segs.length) return 0
   const last = segs[segs.length - 1]
-  return last.offsetPx + (last.endMin - last.startMin) * PX_PER_MIN
+  return last.offsetPx + (last.endMin - last.startMin) * pxPerMin
 }
 
-function timeToX(t: string, segs: Seg[]): number | null {
+function timeToX(t: string, segs: Seg[], pxPerMin: number): number | null {
   const min = toMin(t)
   for (const s of segs) {
     if (min >= s.startMin && min <= s.endMin)
-      return s.offsetPx + (min - s.startMin) * PX_PER_MIN
+      return s.offsetPx + (min - s.startMin) * pxPerMin
   }
   return null
 }
 
-function xToTime(x: number, segs: Seg[]): string | null {
+function xToTime(x: number, segs: Seg[], slotPx: number): string | null {
   for (const s of segs) {
-    const w = (s.endMin - s.startMin) * PX_PER_MIN
+    const w = (s.endMin - s.startMin) * (slotPx / SLOT_MIN)
     if (x >= s.offsetPx && x < s.offsetPx + w)
-      return toTime(s.startMin + Math.floor((x - s.offsetPx) / SLOT_PX) * SLOT_MIN)
+      return toTime(s.startMin + Math.floor((x - s.offsetPx) / slotPx) * SLOT_MIN)
   }
   return null
 }
@@ -144,8 +148,11 @@ export default function GanttView({
   tables, reservations, date, lunchHours, dinnerHours, onSlotClick, onReservationClick, onReservationMove, onWarning,
 }: Props) {
   const { t } = useT()
-  const segs     = buildSegs(lunchHours, dinnerHours)
-  const contentW = totalWidth(segs)
+  const { rowH: ROW_H, slotPx: SLOT_PX, tableColW: TABLE_COL_W, tableColWMobile: TABLE_COL_W_MOBILE }
+    = ganttDimensions(tables.length)
+  const PX_PER_MIN = SLOT_PX / SLOT_MIN
+  const segs     = buildSegs(lunchHours, dinnerHours, PX_PER_MIN)
+  const contentW = totalWidth(segs, PX_PER_MIN)
 
   const [localReservations, setLocalReservations] = useState(reservations)
   useEffect(() => { setLocalReservations(reservations) }, [reservations])
@@ -213,7 +220,7 @@ export default function GanttView({
   }
 
   const isToday = date === todayIso()
-  const nowX = isToday ? timeToX(nowTime, segs) : null
+  const nowX = isToday ? timeToX(nowTime, segs, PX_PER_MIN) : null
 
   const indoorTables  = tables.filter(tbl => tbl.section === 'indoor')
   const outdoorTables = tables.filter(tbl => tbl.section === 'outdoor')
@@ -254,7 +261,7 @@ export default function GanttView({
     // x: relative to right content area (no tableColW subtraction — container starts after it)
     const x = clientX - rect.left + container.scrollLeft
     const y = clientY - rect.top
-    const time = xToTime(x, segs)
+    const time = xToTime(x, segs, SLOT_PX)
     const tRow = tableRows.find(tr => y >= tr.yStart && y < tr.yEnd)
     return time && tRow ? { time, tableId: tRow.id } : null
   }
@@ -419,7 +426,7 @@ export default function GanttView({
             {gm.rows.map(({ tbl, rowBg, isLast }) => {
               let ghostEl: React.ReactNode = null
               if (ghost?.tableId === tbl.id) {
-                const gx = timeToX(ghost.time, segs)
+                const gx = timeToX(ghost.time, segs, PX_PER_MIN)
                 const ghostRes = gx !== null ? localReservations.find(res => res.id === ghost.reservationId) : null
                 if (gx !== null && ghostRes) {
                   const gw = Math.max(Math.min(ghostRes.duration_minutes * PX_PER_MIN, contentW - gx) - 4, 8)
@@ -444,7 +451,7 @@ export default function GanttView({
                   }}
                   onClick={e => {
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                    const time = xToTime(e.clientX - rect.left, segs)
+                    const time = xToTime(e.clientX - rect.left, segs, SLOT_PX)
                     if (time) onSlotClick(tbl.id, time)
                   }}
                 >
@@ -468,7 +475,7 @@ export default function GanttView({
 
                   {/* Reservation blocks */}
                   {(byTable.get(tbl.id) ?? []).map(r => {
-                    const x = timeToX(r.time, segs)
+                    const x = timeToX(r.time, segs, PX_PER_MIN)
                     if (x === null) return null
                     const w = Math.max(Math.min(r.duration_minutes * PX_PER_MIN, contentW - x) - 4, 8)
                     const isDragging = draggingId === r.id

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { getAuthRestaurant } from '@/lib/auth'
 import { addDays } from '@/lib/dates'
-import type { Employee, Shift, Absence } from '@/db/schema'
+import type { Employee, Shift, ShiftWithEmployee, Absence } from '@/db/schema'
 import { toMin, shiftsOverlap } from '@/lib/labor'
 
 // ─── Empleats ────────────────────────────────────────────────────────────────
@@ -140,6 +140,19 @@ export async function reactivateEmployee(id: string): Promise<{ ok: true } | { e
 }
 
 // ─── Torns ────────────────────────────────────────────────────────────────────
+
+export async function getShiftsForDay(date: string): Promise<ShiftWithEmployee[]> {
+  const { supabase, restaurant } = await getAuthRestaurant()
+  const { data, error } = await supabase
+    .from('shifts')
+    .select('*, employee:employees!inner(id, name, role_label, color, avatar_url)')
+    .eq('restaurant_id', restaurant.id)
+    .eq('date', date)
+    .eq('employees.active', true)
+    .order('start_time')
+  if (error) throw error
+  return data as ShiftWithEmployee[]
+}
 
 export async function getShiftsForWeek(
   monday: string,

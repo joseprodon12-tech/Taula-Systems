@@ -1,18 +1,18 @@
 'use client'
 
 import { useMemo, useState, useTransition, useCallback, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, AlertTriangle, Plus, Users } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
 import { addDays, getMondayISO } from '@/lib/dates'
 import { weeklyMinutes, validateWeek } from '@/lib/labor'
-import type { Employee, Shift, Absence, WeeklyHours } from '@/db/schema'
+import type { Employee, Shift, ShiftWithEmployee, Absence, WeeklyHours } from '@/db/schema'
 import {
   createShift, updateShift, deleteShift,
   duplicateWeek, publishWeek,
 } from '@/app/actions/equip'
 import ShiftEditor, { type ShiftFormData } from './ShiftEditor'
-import EmployeeDayGantt from './EmployeeDayGantt'
+import EmployeeDayGantt from '@/components/equip/EmployeeDayGantt'
 import EmpAvatar from '@/components/ui/EmpAvatar'
 import { Toast, useToast } from '@/components/ui/Toast'
 
@@ -44,6 +44,7 @@ export default function EquipClient({
   calendarDots, weeklyHours, role, vistaInicial, diaInicial,
 }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { t, locale } = useT()
   const [isPending, startTransition] = useTransition()
   const { toast, show: showToast, hide: hideToast } = useToast()
@@ -51,6 +52,16 @@ export default function EquipClient({
   const [localShifts, setLocalShifts] = useState(shiftsByDay)
   useEffect(() => { setLocalShifts(shiftsByDay) }, [shiftsByDay])
   const [editor, setEditor] = useState<EditorState | null>(null)
+
+  // Obert des d'una altra pàgina via ?nou-torn=1
+  useEffect(() => {
+    if (searchParams.get('nou-torn') !== '1') return
+    if (role !== 'owner' || employees.length === 0) return
+    const dataParam = searchParams.get('data')
+    const date = dataParam ?? (today >= monday && today <= sunday ? today : monday)
+    setEditor({ mode: 'new', employeeId: employees[0].id, date })
+    router.replace('/equip', { scroll: false })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const sunday = addDays(monday, 6)
   const prevMonday = addDays(monday, -7)
@@ -427,10 +438,16 @@ export default function EquipClient({
   }) {
     const emp = employees.find(e => e.id === shift.employee_id)
     const isOvlp = overlap ?? isOverlap(shift.employee_id, shift.date)
-    const borderColor = isOvlp ? 'var(--state-noshow)' : shift.published ? 'transparent' : 'rgba(255,255,255,0.55)'
-    const borderStyle = shift.published ? 'solid' : 'dashed'
-    const chipOpacity = shift.published ? 1 : 0.82
     const shiftTitle = `${shift.start_time}–${shift.end_time}${shift.zone ? ` · ${shift.zone}` : ''}${warnTitle ? `\n${warnTitle}` : ''}`
+
+    // Punt 4: esborranys = fons ambre translúcid + border puntejat color empleat; publicats = sòlid
+    const chipBg = shift.published ? (emp?.color ?? 'var(--text-muted)') : 'var(--draft-bg)'
+    const chipColor = shift.published ? 'white' : 'var(--primary-hover)'
+    const chipBorder = isOvlp
+      ? '2px dashed var(--state-noshow)'
+      : shift.published
+        ? '2px solid transparent'
+        : `2px dashed ${emp?.color ?? 'var(--primary)'}`
 
     return (
       <div
@@ -440,15 +457,15 @@ export default function EquipClient({
         onPointerUp={e => handleShiftPointerUp(e, shift)}
         title={shiftTitle}
         style={{
-          background: emp?.color ?? 'var(--text-muted)',
-          color: 'white',
+          background: chipBg,
+          color: chipColor,
           borderRadius: 6,
           padding: '2px 6px',
           fontSize: 11,
           fontWeight: 600,
           cursor: role === 'owner' ? 'pointer' : 'default',
-          border: `2px ${borderStyle} ${borderColor}`,
-          opacity: isDropTarget ? 0.5 : chipOpacity,
+          border: chipBorder,
+          opacity: isDropTarget ? 0.5 : 1,
           userSelect: 'none',
           touchAction: 'none',
           lineHeight: 1.6,
@@ -456,6 +473,7 @@ export default function EquipClient({
           display: 'flex',
           alignItems: 'center',
           gap: 3,
+          transition: 'background-color 0.3s',
         }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
@@ -491,6 +509,40 @@ export default function EquipClient({
   const multiGroup = groups.length > 1
 
   function DesktopGrid() {
+    // Punt 7: cap empleat → fila fantasma clicable en lloc de la graella buida
+    if (employees.length === 0) {
+      return (
+        <div style={{ overflowX: 'auto' }}>
+          <div style={{ minWidth: EMP_COL + 7 * 100 + 64, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+            {/* Capçalera de dies */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+              <div style={{ width: EMP_COL, flexShrink: 0, padding: '8px 10px', fontSize: 12, color: 'var(--text-muted)' }} />
+              {days.map(day => (
+                <div key={day.iso} style={{ flex: 1, minWidth: 100, padding: '6px 8px', borderLeft: '1px solid var(--border)', textAlign: 'center' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: day.iso === today ? 'var(--primary)' : 'var(--text)' }}>{day.label}</div>
+                </div>
+              ))}
+              <div style={{ width: 64, flexShrink: 0 }} />
+            </div>
+            {/* Fila fantasma */}
+            <div
+              style={{ display: 'flex', cursor: 'pointer', opacity: 0.6 }}
+              onClick={() => router.push('/equip/empleats')}
+            >
+              <div style={{ width: EMP_COL, flexShrink: 0, padding: '10px', display: 'flex', alignItems: 'center', gap: 8, borderRight: '1px solid var(--border)', minHeight: 48 }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2px dashed var(--border)', flexShrink: 0 }} />
+                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nom</span>
+              </div>
+              {days.map(day => (
+                <div key={day.iso} style={{ flex: 1, minWidth: 100, minHeight: 48, borderLeft: '1px solid var(--border)', borderTop: 'none' }} />
+              ))}
+              <div style={{ width: 64, flexShrink: 0, borderLeft: '1px solid var(--border)' }} />
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div style={{ overflowX: 'auto' }}>
         <div style={{ minWidth: EMP_COL + 7 * 100 + 64 }}>
@@ -566,6 +618,7 @@ export default function EquipClient({
                           data-cell="1"
                           data-date={day.iso}
                           data-empid={emp.id}
+                          className="equip-cell"
                           onClick={e => {
                             if (absence || role !== 'owner') return
                             if (!(e.target as HTMLElement).closest('[data-shiftid]')) handleOpenEditor(emp.id, day.iso)
@@ -591,6 +644,10 @@ export default function EquipClient({
                               warnTitle={warnings.filter(w => w.employeeId === emp.id && w.date === day.iso).map(w => warningTitle(w.key)).join('\n')}
                             />
                           ))}
+                          {/* Punt 1: indicador + visible en hover quan la cel·la és buida */}
+                          {!absence && role === 'owner' && (
+                            <span className="equip-cell-hint">+</span>
+                          )}
                         </div>
                       )
                     })}
@@ -676,7 +733,7 @@ export default function EquipClient({
             date={mobileDay}
             today={today}
             employees={employees}
-            shifts={localShifts[mobileDay] ?? []}
+            shifts={(localShifts[mobileDay] ?? []).flatMap(s => { const emp = employees.find(e => e.id === s.employee_id); return emp ? [{ ...s, employee: emp }] : [] }) as ShiftWithEmployee[]}
             absences={dayAbs}
             warnings={warnings}
             calendarDots={calendarDots[mobileDay]}
@@ -687,27 +744,25 @@ export default function EquipClient({
       )
     }
 
-    // "Tot" mode: weekly overview cards per employee
-    const hasAnyShifts = employees.some(emp =>
-      days.some(day =>
-        (localShifts[day.iso] ?? []).some(s => s.employee_id === emp.id) ||
-        !!absenceMap[emp.id]?.[day.iso]
+    // Punt 8: tots els empleats sempre visibles, tots els dies, "—" clicable per afegir horari
+    if (employees.length === 0) {
+      return (
+        <div>
+          {chipRow}
+          <div style={{ textAlign: 'center', padding: 32 }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => router.push('/equip/empleats')}>
+              {t('equip.empleats.afegir')}
+            </button>
+          </div>
+        </div>
       )
-    )
+    }
 
     return (
       <div>
         {chipRow}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 80 }}>
           {employees.map(emp => {
-            const empDays = days.map(day => {
-              const dayShifts = (localShifts[day.iso] ?? []).filter(s => s.employee_id === emp.id)
-              const absence = absenceMap[emp.id]?.[day.iso]
-              return { day, dayShifts, absence }
-            }).filter(({ dayShifts, absence }) => dayShifts.length > 0 || !!absence)
-
-            if (empDays.length === 0) return null
-
             const weekH = empWeeklyH[emp.id] ?? 0
             const warnEmp = hasWarning(emp.id)
 
@@ -723,35 +778,41 @@ export default function EquipClient({
                     </span>
                   )}
                 </div>
-                {empDays.map(({ day, dayShifts, absence }, idx) => (
-                  <div key={day.iso} style={{
-                    display: 'flex', gap: 8, fontSize: 12,
-                    paddingTop: 5, marginTop: idx === 0 ? 0 : 3,
-                    borderTop: '1px solid var(--border)',
-                  }}>
-                    <span style={{ color: 'var(--text-muted)', fontWeight: 600, minWidth: 44, flexShrink: 0 }}>
-                      {day.label}:
-                    </span>
-                    {absence ? (
-                      <span style={{ color: 'var(--text-muted)' }}>
-                        {t(`equip.absencies.${absence.type}` as Parameters<typeof t>[0])}
+                {days.map(({ iso, label }, idx) => {
+                  const dayShifts = (localShifts[iso] ?? []).filter(s => s.employee_id === emp.id)
+                  const absence = absenceMap[emp.id]?.[iso]
+                  const isEmpty = dayShifts.length === 0 && !absence
+                  return (
+                    <div
+                      key={iso}
+                      onClick={() => { if (isEmpty && role === 'owner') handleOpenEditor(emp.id, iso) }}
+                      style={{
+                        display: 'flex', gap: 8, fontSize: 12,
+                        paddingTop: 5, marginTop: idx === 0 ? 0 : 3,
+                        borderTop: '1px solid var(--border)',
+                        cursor: isEmpty && role === 'owner' ? 'pointer' : 'default',
+                      }}
+                    >
+                      <span style={{ color: 'var(--text-muted)', fontWeight: 600, minWidth: 44, flexShrink: 0 }}>
+                        {label}:
                       </span>
-                    ) : (
-                      <span style={{ color: 'var(--text)' }}>
-                        {dayShifts.map(s => `${s.start_time}–${s.end_time}`).join(' · ')}
-                      </span>
-                    )}
-                  </div>
-                ))}
+                      {absence ? (
+                        <span style={{ color: 'var(--text-muted)' }}>
+                          {t(`equip.absencies.${absence.type}` as Parameters<typeof t>[0])}
+                        </span>
+                      ) : isEmpty ? (
+                        <span style={{ color: 'var(--border)' }}>—</span>
+                      ) : (
+                        <span style={{ color: 'var(--text)' }}>
+                          {dayShifts.map(s => `${s.start_time}–${s.end_time}`).join(' · ')}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )
           })}
-
-          {!hasAnyShifts && (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: 24 }}>
-              {t('avui.sense')}
-            </div>
-          )}
         </div>
       </div>
     )
@@ -883,7 +944,7 @@ export default function EquipClient({
               date={diaGantt}
               today={today}
               employees={employees}
-              shifts={localShifts[diaGantt] ?? []}
+              shifts={(localShifts[diaGantt] ?? []).flatMap(s => { const emp = employees.find(e => e.id === s.employee_id); return emp ? [{ ...s, employee: emp }] : [] }) as ShiftWithEmployee[]}
               absences={dayAbsences}
               warnings={warnings}
               calendarDots={calendarDots[diaGantt]}
@@ -914,7 +975,7 @@ export default function EquipClient({
           onDelete={editor.shift
             ? () => handleDeleteShift(editor.shift!.id, editor.shift!.date)
             : undefined}
-          onAddTram={editor.mode === 'edit' ? handleAddTram : undefined}
+          onAddTram={handleAddTram}
           onClose={() => setEditor(null)}
           isMobile={typeof window !== 'undefined' && window.innerWidth < 768}
         />

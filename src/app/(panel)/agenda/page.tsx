@@ -1,5 +1,5 @@
 import { getRestaurant } from '@/app/actions/config'
-import { getReservationsForDay, getReservationsForWeek } from '@/app/actions/reservations'
+import { getReservationsForDay, getReservationsForWeek, getCalendarDots } from '@/app/actions/reservations'
 import { getTables } from '@/app/actions/tables'
 import { todayISO, addDays, getMondayISO } from '@/lib/dates'
 import AgendaClient from './AgendaClient'
@@ -19,6 +19,7 @@ export default async function AgendaPage({ searchParams }: Props) {
   const selectedDate = dataParam ?? today
   const monday = getMondayISO(selectedDate)
   const { restaurant } = await getRestaurant()
+  const dots = await getCalendarDots(today, addDays(today, 62))
 
   if (vista === 'setmana') {
     const sunday = addDays(monday, 6)
@@ -32,6 +33,7 @@ export default async function AgendaPage({ searchParams }: Props) {
         tables={[]}
         dayReservations={[]}
         reservationsByDay={reservationsByDay}
+        dots={dots}
       />
     )
   }
@@ -50,6 +52,7 @@ export default async function AgendaPage({ searchParams }: Props) {
       tables={tables}
       dayReservations={dayReservations}
       reservationsByDay={{}}
+      dots={dots}
     />
   )
 }

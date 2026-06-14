@@ -15,6 +15,7 @@ interface Props {
   selectedDate: string
   startMonth?: { year: number; month: number }
   onSelect?: () => void
+  navigate?: (date: string) => void
 }
 
 function isoDate(year: number, month: number, day: number): string {
@@ -82,7 +83,7 @@ function MonthGrid({
   )
 }
 
-export default function MiniCalendar({ dots, selectedDate, startMonth, onSelect }: Props) {
+export default function MiniCalendar({ dots, selectedDate, startMonth, onSelect, navigate }: Props) {
   const router = useRouter()
   const base = startMonth ?? {
     year: new Date().getFullYear(),
@@ -99,7 +100,8 @@ export default function MiniCalendar({ dots, selectedDate, startMonth, onSelect 
   })
 
   function handleSelect(date: string) {
-    router.push(`/avui?data=${date}`)
+    if (navigate) navigate(date)
+    else router.push(`/avui?data=${date}`)
     onSelect?.()
   }
 

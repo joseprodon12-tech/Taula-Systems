@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { X, Trash2, Plus } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
 import type { Shift, Employee, WeeklyHours } from '@/db/schema'
@@ -54,6 +54,17 @@ export default function ShiftEditor({
   const [end, setEnd] = useState(shift?.end_time ?? defaults.end)
   const [zone, setZone] = useState(shift?.zone ?? '')
   const [notes, setNotes] = useState(shift?.notes ?? '')
+
+  // Punt 6: hores habituals del restaurant per a selecció ràpida
+  const suggestedTimes = useMemo(() => {
+    const times = new Set<string>()
+    for (const day of Object.values(weeklyHours)) {
+      if (!day || day.closed) continue
+      if (day.lunch) { times.add(day.lunch[0]); times.add(day.lunch[1]) }
+      if (day.dinner) { times.add(day.dinner[0]); times.add(day.dinner[1]) }
+    }
+    return [...times].sort()
+  }, [weeklyHours])
 
   const overlayRef = useRef<HTMLDivElement>(null)
 
@@ -162,8 +173,37 @@ export default function ShiftEditor({
             </div>
           </div>
 
-          {/* Add second leg (edit mode only) */}
-          {mode === 'edit' && onAddTram && (
+          {/* Punt 6: píndoles d'hores habituals del restaurant */}
+          {suggestedTimes.length > 0 && (
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: -4 }}>
+              {suggestedTimes.map(time => {
+                const isSelected = start === time || end === time
+                return (
+                  <button
+                    key={time}
+                    type="button"
+                    onClick={() => {
+                      if (!start) setStart(time)
+                      else if (!end || start === time) setEnd(time)
+                      else setStart(time)
+                    }}
+                    style={{
+                      padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                      border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+                      background: isSelected ? 'var(--primary)' : 'transparent',
+                      color: isSelected ? 'white' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {time}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Add second leg */}
+          {onAddTram && (
             <button
               type="button"
               className="btn btn-ghost btn-sm"

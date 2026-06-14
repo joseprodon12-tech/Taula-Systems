@@ -84,6 +84,10 @@ export type Shift = {
   created_at: string; updated_at: string
 }
 
+export type ShiftWithEmployee = Shift & {
+  employee: Pick<Employee, 'id' | 'name' | 'role_label' | 'color' | 'avatar_url'>
+}
+
 export type Absence = {
   id: string; restaurant_id: string; employee_id: string
   date_from: string; date_to: string

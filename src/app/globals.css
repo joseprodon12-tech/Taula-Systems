@@ -22,6 +22,9 @@
 
   --warning:        #B45309;
   --warning-bg:     #FEF3C7;
+
+  /* Punts 1 i 4 del brief EQUIP-DISSENY-V1: cel·les hover + chips esborrany */
+  --draft-bg:       color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 * { box-sizing: border-box; }
@@ -97,6 +100,17 @@ body {
 .badge-cancel   { background: #F5F3FF; color: var(--state-cancel); }
 .badge-standby  { background: #FEF9C3; color: #854D0E; }
 .badge-draft    { background: transparent; color: var(--text-muted); border: 1.5px dashed var(--border); }
+
+/* ── Equip: cel·les clicables (Punt 1) ── */
+.equip-cell:hover { background: var(--primary-soft) !important; }
+.equip-cell-hint {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 300; color: var(--primary);
+  opacity: 0; pointer-events: none; user-select: none;
+  transition: opacity 0.1s;
+}
+.equip-cell:hover .equip-cell-hint { opacity: 0.3; }
 
 /* ── Misc ── */
 .label { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
