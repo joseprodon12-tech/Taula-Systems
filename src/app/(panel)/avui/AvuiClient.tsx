@@ -6,7 +6,6 @@ import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Cell, LabelList, ResponsiveContainer } from 'recharts'
 import MiniCalendar from '@/components/MiniCalendar'
 import DatePicker from '@/components/DatePicker'
-import EmployeeDayGantt from '@/components/equip/EmployeeDayGantt'
 import EmpAvatar from '@/components/ui/EmpAvatar'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { useT } from '@/context/LocaleContext'
@@ -66,11 +65,7 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
   const { t } = useT()
   const { toast, show, hide } = useToast()
   const [showCalendar, setShowCalendar] = useState(false)
-  const [showGantt, setShowGantt] = useState(true)
-
-  useEffect(() => {
-    if (window.innerWidth < 768) setShowGantt(false)
-  }, [])
+  const [showNotif, setShowNotif] = useState(true)
 
   useEffect(() => {
     if (searchParams.get('created') === '1') {
@@ -159,56 +154,6 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
           <CalendarDays size={16} />
         </button>
       </div>
-
-      {/* ── ZONA 1: Avisos accionables ── */}
-      {avisos.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-          {avisos.map((aviso, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                flexWrap: 'wrap', gap: 8, padding: '10px 14px',
-                background: '#FFFBEB', borderLeft: '4px solid #F59E0B', borderRadius: '0 8px 8px 0',
-              }}
-            >
-              {aviso.key === 'senseHoraris' && (
-                <>
-                  <span style={{ fontSize: 13, color: 'var(--text)' }}>
-                    {t('avui.avisos.senseHorarisA')} {formatNextMonday(aviso.nextMonday)} {t('avui.avisos.senseHorarisB')}
-                  </span>
-                  <a href={`/equip?setmana=${aviso.nextMonday}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                    {t('avui.avisos.anarEquip')}
-                  </a>
-                </>
-              )}
-              {aviso.key === 'senseTaula' && (
-                <>
-                  <span style={{ fontSize: 13, color: 'var(--text)' }}>
-                    {aviso.count} {aviso.count === 1 ? t('avui.avisos.senseTaula1') : t('avui.avisos.senseTaula')}
-                  </span>
-                  <a href={`/reserva/${aviso.firstId}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                    {t('avui.avisos.anarReserva')}
-                  </a>
-                </>
-              )}
-              {aviso.key === 'standby' && (
-                <>
-                  <span style={{ fontSize: 13, color: 'var(--text)' }}>
-                    {aviso.count === 1
-                      ? <><strong>{aviso.firstName}</strong> {t('avui.avisos.standbyEspera')}</>
-                      : <>{aviso.count} {t('avui.avisos.standbyN')}</>
-                    }
-                  </span>
-                  <a href={`/reserva/${aviso.firstId}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                    {t('avui.avisos.anarReserva')}
-                  </a>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* ── ZONA 2: Dues columnes ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 20 }}>
@@ -329,18 +274,79 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
         </div>
       </div>
 
-      {/* ── ZONA 3: EmployeeDayGantt (toggle) ── */}
+      {/* ── ZONA 3: Notificacions (toggle) ── */}
       <div className="card" style={{ padding: 0, marginBottom: 20, overflow: 'hidden' }}>
         <button
           className="btn btn-ghost btn-sm"
-          style={{ width: '100%', justifyContent: 'center', padding: '10px 16px', borderRadius: 0, fontSize: 13, color: 'var(--text-muted)' }}
-          onClick={() => setShowGantt(v => !v)}
+          style={{ width: '100%', justifyContent: 'space-between', padding: '10px 16px', borderRadius: 0, fontSize: 13, color: 'var(--text-muted)' }}
+          onClick={() => setShowNotif(v => !v)}
         >
-          {showGantt ? t('avui.gantt.amagar') : t('avui.gantt.mostrar')}
+          <span style={{ fontWeight: 600 }}>
+            {t('avui.notificacions.titol')}
+            {avisos.length > 0 && (
+              <span style={{ marginLeft: 6, background: '#F59E0B', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>
+                {avisos.length}
+              </span>
+            )}
+          </span>
+          <span>{showNotif ? '▲' : '▼'}</span>
         </button>
-        {showGantt && (
-          <div style={{ padding: 16, borderTop: '1px solid var(--border)' }}>
-            <EmployeeDayGantt date={selectedDate} shifts={shiftsToday} today={today} />
+        {showNotif && (
+          <div style={{ borderTop: '1px solid var(--border)' }}>
+            {avisos.length === 0 ? (
+              <p style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-muted)' }}>
+                {t('avui.notificacions.cap')}
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {avisos.map((aviso, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      flexWrap: 'wrap', gap: 8, padding: '10px 16px',
+                      borderBottom: i < avisos.length - 1 ? '1px solid var(--border)' : undefined,
+                      borderLeft: '3px solid #F59E0B',
+                      background: '#FFFBEB',
+                    }}
+                  >
+                    {aviso.key === 'senseHoraris' && (
+                      <>
+                        <span style={{ fontSize: 13, color: 'var(--text)' }}>
+                          {t('avui.avisos.senseHorarisA')} {formatNextMonday(aviso.nextMonday)} {t('avui.avisos.senseHorarisB')}
+                        </span>
+                        <a href={`/equip?setmana=${aviso.nextMonday}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                          {t('avui.avisos.anarEquip')}
+                        </a>
+                      </>
+                    )}
+                    {aviso.key === 'senseTaula' && (
+                      <>
+                        <span style={{ fontSize: 13, color: 'var(--text)' }}>
+                          {aviso.count} {aviso.count === 1 ? t('avui.avisos.senseTaula1') : t('avui.avisos.senseTaula')}
+                        </span>
+                        <a href={`/reserva/${aviso.firstId}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                          {t('avui.avisos.anarReserva')}
+                        </a>
+                      </>
+                    )}
+                    {aviso.key === 'standby' && (
+                      <>
+                        <span style={{ fontSize: 13, color: 'var(--text)' }}>
+                          {aviso.count === 1
+                            ? <><strong>{aviso.firstName}</strong> {t('avui.avisos.standbyEspera')}</>
+                            : <>{aviso.count} {t('avui.avisos.standbyN')}</>
+                          }
+                        </span>
+                        <a href={`/reserva/${aviso.firstId}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                          {t('avui.avisos.anarReserva')}
+                        </a>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

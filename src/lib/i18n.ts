@@ -118,6 +118,10 @@ const ca = {
       mostrar: 'Veure Gantt equip ▼',
       amagar:  'Amagar Gantt equip ▲',
     },
+    notificacions: {
+      titol: 'Notificacions',
+      cap:   'Tot correcte — sense avisos',
+    },
   },
   agenda: {
     setmanaAnterior: 'Setmana anterior',
@@ -367,6 +371,10 @@ const es: DeepString<typeof ca> = {
     gantt: {
       mostrar: 'Ver Gantt equipo ▼',
       amagar:  'Ocultar Gantt equipo ▲',
+    },
+    notificacions: {
+      titol: 'Notificaciones',
+      cap:   'Todo correcto — sin avisos',
     },
   },
   agenda: {
