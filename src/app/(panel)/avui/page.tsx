@@ -1,6 +1,7 @@
-import { getReservationsForDay, getCalendarDots } from '@/app/actions/reservations'
+import { getReservationsForDay } from '@/app/actions/reservations'
 import { getShiftsForDay, getShiftsForWeek } from '@/app/actions/equip'
 import { todayISO, addDays, getMondayISO } from '@/lib/dates'
+
 import type { Reservation } from '@/db/schema'
 import AvuiClient, { type AvisoData } from './AvuiClient'
 
@@ -31,9 +32,8 @@ export default async function AvuiPage({ searchParams }: Props) {
   const nextMonday = getMondayISO(addDays(today, 7))
   const nextSunday = addDays(nextMonday, 6)
 
-  const [reserves, dots, shiftsToday, nextWeekShiftsByDay] = await Promise.all([
+  const [reserves, shiftsToday, nextWeekShiftsByDay] = await Promise.all([
     getReservationsForDay(selectedDate),
-    getCalendarDots(today, addDays(today, 62)),
     getShiftsForDay(selectedDate),
     getShiftsForWeek(nextMonday, nextSunday),
   ])
@@ -71,7 +71,6 @@ export default async function AvuiPage({ searchParams }: Props) {
       avisos={avisos}
       selectedDate={selectedDate}
       today={today}
-      dots={dots}
     />
   )
 }

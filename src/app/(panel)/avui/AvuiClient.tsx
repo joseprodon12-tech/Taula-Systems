@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Cell, LabelList, ResponsiveContainer } from 'recharts'
-import MiniCalendar from '@/components/MiniCalendar'
 import DatePicker from '@/components/DatePicker'
 import EmpAvatar from '@/components/ui/EmpAvatar'
 import { Toast, useToast } from '@/components/ui/Toast'
@@ -29,7 +28,6 @@ interface Props {
   avisos: AvisoData[]
   selectedDate: string
   today: string
-  dots: Record<string, { count: number; pax: number }>
 }
 
 function toMin(time: string): number {
@@ -59,7 +57,7 @@ function getEmpStatus(shifts: ShiftWithEmployee[], nowMin: number): EmpStatus {
 const DIES  = ['Dg', 'Dll', 'Dm', 'Dc', 'Dj', 'Dv', 'Ds']
 const MESOS = ['Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny', 'Juliol', 'Agost', 'Setembre', 'Octubre', 'Novembre', 'Desembre']
 
-export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, selectedDate, today, dots }: Props) {
+export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, selectedDate, today }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { t } = useT()
@@ -92,9 +90,10 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
     return `${date.getDate()}/${date.getMonth() + 1}`
   }
 
-  const startMonth = { year: new Date().getFullYear(), month: new Date().getMonth() }
   const active = reserves.filter(r => r.status !== 'cancelled')
   const totalPax = active.reduce((s, r) => s + r.party_size, 0)
+  const dinarPax = active.filter(r => toMin(r.time) < 17 * 60).reduce((s, r) => s + r.party_size, 0)
+  const soparPax = active.filter(r => toMin(r.time) >= 17 * 60).reduce((s, r) => s + r.party_size, 0)
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes()
   const nowHour = new Date().getHours()
 
@@ -160,13 +159,20 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
 
         {/* Columna esquerra: gràfic + properes reserves */}
         <div className="card" style={{ padding: 20 }}>
-          <p style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>
+          <p style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
             <span style={{ color: 'var(--primary)' }}>{active.length}</span>
             {' '}{active.length === 1 ? t('avui.reserva') : t('avui.reserves')}
             {' · '}
             <span style={{ color: 'var(--primary)' }}>{totalPax}</span>
             {' '}{t('avui.persones')}
           </p>
+          {active.length > 0 && (
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+              {dinarPax > 0 && <span>{t('avui.dinar')} <strong style={{ color: 'var(--text)' }}>{dinarPax}p</strong></span>}
+              {dinarPax > 0 && soparPax > 0 && <span>  ·  </span>}
+              {soparPax > 0 && <span>{t('avui.sopar')} <strong style={{ color: 'var(--text)' }}>{soparPax}p</strong></span>}
+            </p>
+          )}
 
           {hourlyData.length > 0 ? (
             <div style={{ height: 120, marginBottom: 16 }}>
@@ -349,14 +355,6 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
             )}
           </div>
         )}
-      </div>
-
-      {/* ── Minicalendari (compacte, al peu) ── */}
-      <div className="card" style={{ maxWidth: 240 }}>
-        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-          {t('avui.calendari')}
-        </p>
-        <MiniCalendar dots={dots} selectedDate={selectedDate} startMonth={startMonth} />
       </div>
 
       {/* ── Bottom sheet calendari (mòbil) ── */}
