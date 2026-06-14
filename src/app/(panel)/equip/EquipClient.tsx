@@ -824,6 +824,9 @@ export default function EquipClient({
 
   function navigateCalendar(date: string) {
     router.push(`/equip?setmana=${getMondayISO(date)}&data=${date}&vista=dia`)
+    setVista('dia')
+    setDiaGantt(date)
+    setMobileDay(date)
   }
 
   // ── Main render ─────────────────────────────────────────────────────────────
