@@ -21,7 +21,7 @@ export default async function EquipPage({ searchParams }: Props) {
       getEmployees(),
       getShiftsForWeek(monday, sunday),
       getAbsencesForRange(monday, sunday),
-      getCalendarDots(monday, sunday),
+      getCalendarDots(today, addDays(today, 62)),
     ])
 
   return (

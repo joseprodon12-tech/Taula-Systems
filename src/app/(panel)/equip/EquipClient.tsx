@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, useCallback, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight, AlertTriangle, Plus, Users } from 'lucide-react'
+import { ChevronLeft, ChevronRight, AlertTriangle, Plus, Users, CalendarDays } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
 import { addDays, getMondayISO } from '@/lib/dates'
 import { weeklyMinutes, validateWeek } from '@/lib/labor'
@@ -13,6 +13,8 @@ import {
 } from '@/app/actions/equip'
 import ShiftEditor, { type ShiftFormData } from './ShiftEditor'
 import EmployeeDayGantt from '@/components/equip/EmployeeDayGantt'
+import MiniCalendar from '@/components/MiniCalendar'
+import DatePicker from '@/components/DatePicker'
 import EmpAvatar from '@/components/ui/EmpAvatar'
 import { Toast, useToast } from '@/components/ui/Toast'
 
@@ -76,6 +78,8 @@ export default function EquipClient({
   } | null>(null)
   const [dragTarget, setDragTarget] = useState<{ date: string; empId: string } | null>(null)
   const ghostRef = useRef<HTMLDivElement | null>(null)
+
+  const [showCalendar, setShowCalendar] = useState(false)
 
   // Mobile: selected day ('tot' = weekly overview, ISO date = day Gantt)
   const [mobileDay, setMobileDay] = useState<string>('tot')
@@ -818,10 +822,15 @@ export default function EquipClient({
     )
   }
 
+  function navigateCalendar(date: string) {
+    router.push(`/equip?setmana=${getMondayISO(date)}&data=${date}&vista=dia`)
+  }
+
   // ── Main render ─────────────────────────────────────────────────────────────
 
   return (
-    <>
+    <div className="flex gap-6">
+      <div className="flex-1 min-w-0">
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         {/* Navigation (week or day) */}
@@ -884,6 +893,15 @@ export default function EquipClient({
             )}
           </>
         )}
+
+        {/* Calendari (mòbil) */}
+        <button
+          className="btn btn-ghost btn-sm md:hidden"
+          style={{ padding: '6px 8px', marginLeft: 'auto' }}
+          onClick={() => setShowCalendar(true)}
+        >
+          <CalendarDays size={16} />
+        </button>
 
         {/* Gestionar empleats */}
         <button
@@ -995,6 +1013,44 @@ export default function EquipClient({
       </div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
-    </>
+      </div>
+
+      {/* ── Sidebar desktop ── */}
+      <aside className="hidden md:block w-52 shrink-0">
+        <div className="card sticky top-0" style={{ maxHeight: 'calc(100vh - 48px)', overflowY: 'auto' }}>
+          <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
+            {t('avui.calendari')}
+          </p>
+          <MiniCalendar
+            dots={calendarDots}
+            selectedDate={monday}
+            startMonth={{ year: new Date().getFullYear(), month: new Date().getMonth() }}
+            navigate={navigateCalendar}
+          />
+        </div>
+      </aside>
+
+      {/* ── Bottom sheet mòbil ── */}
+      {showCalendar && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            style={{ background: 'rgba(0,0,0,0.4)' }}
+            onClick={() => setShowCalendar(false)}
+          />
+          <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl p-6 pb-8" style={{ background: 'var(--bg)' }}>
+            <div className="w-10 h-1 rounded mx-auto mb-4" style={{ background: 'var(--border)' }} />
+            <DatePicker
+              inline
+              value={monday}
+              onChange={(date) => {
+                navigateCalendar(date)
+                setShowCalendar(false)
+              }}
+            />
+          </div>
+        </>
+      )}
+    </div>
   )
 }
