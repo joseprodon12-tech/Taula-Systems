@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAvailableSlots } from '@/lib/schedule'
+import { sendReservationNotification } from '@/lib/notifications'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const {
       restaurant_id,
-      date, time, party_size, customer_name, customer_phone,
+      date, time, party_size, customer_name, customer_phone, customer_email,
       allergies, special_occasion,
     } = body
 
@@ -105,45 +106,20 @@ export async function POST(request: NextRequest) {
       duration_minutes: duration,
       customer_name,
       customer_phone,
+      customer_email: customer_email?.trim() || null,
       allergies: allergies || [],
       special_occasion: special_occasion || null,
       status: assignedStatus,
       source: 'widget',
       table_number: assignedTableNumber,
-    }).select('id').single()
+    }).select('id, restaurant_id, date, time, party_size, section, duration_minutes, customer_name, customer_phone, customer_email, notes, allergies, special_occasion, table_number, status, source, reminder_sent_at, created_at, updated_at').single()
 
     if (error) {
       console.error('Supabase error:', error)
       return NextResponse.json({ error: 'Error en guardar la reserva' }, { status: 500 })
     }
 
-    try {
-      const accountSid = process.env.TWILIO_ACCOUNT_SID
-      const authToken = process.env.TWILIO_AUTH_TOKEN
-      const from = process.env.TWILIO_WHATSAPP_FROM
-
-      if (accountSid && authToken && from && restaurant.whatsapp_number) {
-        const twilio = (await import('twilio')).default
-        const client = twilio(accountSid, authToken)
-
-        const dateObj = new Date(date + 'T12:00:00')
-        const formattedDate = dateObj.toLocaleDateString('ca-ES', {
-          weekday: 'long', day: 'numeric', month: 'long',
-        })
-
-        const toNumber = customer_phone.startsWith('+')
-          ? customer_phone
-          : `+34${customer_phone.replace(/\s/g, '')}`
-
-        await client.messages.create({
-          from,
-          to: `whatsapp:${toNumber}`,
-          body: `🍽️ *${restaurant.name}*\n\nHola ${customer_name}! La teva reserva ha estat rebuda.\n\n📅 ${formattedDate}\n🕐 ${time}h\n👥 ${pax} ${pax === 1 ? 'persona' : 'persones'}\n\nEn 24 hores rebràs un recordatori. Si necessites canviar, respon a aquest missatge.`,
-        })
-      }
-    } catch (twilioError) {
-      console.error('Twilio error:', twilioError)
-    }
+    await sendReservationNotification(restaurant, data, 'confirmation')
 
     return NextResponse.json({ id: data.id }, { status: 201 })
   } catch (error) {

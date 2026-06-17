@@ -23,10 +23,17 @@ export type Restaurant = {
   default_duration_dinner_min: number
   group_threshold: number
   whatsapp_number: string | null
+  notification_channel: 'whatsapp' | 'email' | 'none'
+  whatsapp_provider: 'twilio' | 'meta'
+  notification_email_from: string | null
+  whatsapp_phone_number_id: string | null
   owner_id: string | null
   created_at: string
   updated_at: string
 }
+
+export type NotificationChannel = 'whatsapp' | 'email' | 'none'
+export type WhatsAppProvider = 'twilio' | 'meta'
 
 export type Reservation = {
   id: string
