@@ -151,6 +151,13 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
     setNotifChanged(true)
   }
   function saveNotif() {
+    if (notif.notification_channel === 'email' && notif.notification_email_from) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(notif.notification_email_from.trim())) {
+        show('El remitent ha de ser una adreça d\'email vàlida (ex: reserves@taulaapp.com)', 'error')
+        return
+      }
+    }
     startTransition(async () => {
       try {
         await saveNotificationConfig(restaurant.id, notif)
@@ -507,7 +514,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
             <div style={row}>
               <span style={lbl}>{t('config.notificacions.remitent')}</span>
               <input
-                type="text"
+                type="email"
                 value={notif.notification_email_from}
                 onChange={e => handleNotifChange('notification_email_from', e.target.value)}
                 placeholder={t('config.notificacions.remitentHint')}

@@ -82,9 +82,15 @@ export async function saveNotificationConfig(id: string, data: {
   const { supabase, role } = await getAuthRestaurant()
   if (role !== 'owner') return { error: 'Sense permisos' }
 
+  const emailFrom = data.notification_email_from.trim() || null
+  if (emailFrom) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(emailFrom)) return { error: 'El remitent ha de ser una adreça d\'email vàlida' }
+  }
+
   const { error } = await supabase.from('restaurants').update({
     notification_channel: data.notification_channel,
-    notification_email_from: data.notification_email_from.trim() || null,
+    notification_email_from: emailFrom,
     updated_at: new Date().toISOString(),
   }).eq('id', id)
   if (error) throw error
