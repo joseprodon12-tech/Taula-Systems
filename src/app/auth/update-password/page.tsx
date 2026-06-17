@@ -74,6 +74,16 @@ export default function UpdatePasswordPage() {
           <button type="submit" disabled={loading} className="btn btn-primary w-full">
             {loading ? 'Guardant...' : 'Guardar contrasenya'}
           </button>
+          <button
+            type="button"
+            className="btn btn-ghost w-full"
+            onClick={async () => {
+              await createClient().auth.signOut()
+              router.push('/login')
+            }}
+          >
+            Cancel·lar
+          </button>
         </form>
       </div>
     </main>
