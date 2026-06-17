@@ -17,9 +17,10 @@ export async function sendEmail(
 ): Promise<NotificationResult> {
   const email = reservation.customer_email!
   const { subject, html, text } = buildEmailTemplate(restaurant, reservation, kind)
-  const fromName = restaurant.notification_email_from ?? restaurant.name
+  const fromName = restaurant.name
+  const replyTo = restaurant.notification_email_from ?? process.env.EMAIL_FROM_ADDRESS
 
-  await dispatchEmail({ to: email, subject, html, text, fromName, replyTo: restaurant.email ?? undefined })
+  await dispatchEmail({ to: email, subject, html, text, fromName, replyTo })
   return { sent: true }
 }
 
