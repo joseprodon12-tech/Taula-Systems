@@ -6,7 +6,7 @@ import DatePicker from '@/components/DatePicker'
 import { Toast, useToast } from '@/components/ui/Toast'
 import {
   saveRestaurantInfo, saveWeeklyHours, saveCapacity, saveDurations,
-  addClosure, removeClosure,
+  addClosure, removeClosure, saveNotificationConfig,
 } from '@/app/actions/config'
 import { createTable, updateTable, deleteTable } from '@/app/actions/tables'
 import type { Restaurant, Closure, Table, WeeklyHours, DayHours } from '@/db/schema'
@@ -135,6 +135,27 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         await saveCapacity(restaurant.id, capacity.indoor, capacity.outdoor)
         setCapChanged(false)
         show('Capacitat guardada', 'success')
+      } catch { show('Error en guardar', 'error') }
+    })
+  }
+
+  // ── Notification config ──
+  const [notif, setNotif] = useState({
+    notification_channel: restaurant.notification_channel ?? 'whatsapp' as 'whatsapp' | 'email' | 'none',
+    notification_email_from: restaurant.notification_email_from ?? '',
+  })
+  const [notifChanged, setNotifChanged] = useState(false)
+
+  function handleNotifChange(field: keyof typeof notif, value: string) {
+    setNotif(prev => ({ ...prev, [field]: value }))
+    setNotifChanged(true)
+  }
+  function saveNotif() {
+    startTransition(async () => {
+      try {
+        await saveNotificationConfig(restaurant.id, notif)
+        setNotifChanged(false)
+        show(t('config.notificacions.guardat'), 'success')
       } catch { show('Error en guardar', 'error') }
     })
   }
@@ -459,6 +480,48 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
             <div style={{ padding: '12px 16px' }}>
               <button className="btn btn-primary" style={{ width: '100%' }} onClick={saveDurationData} disabled={isPending}>
                 Guardar durades
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* NOTIFICACIONS */}
+      <p style={sTitle}>{t('config.notificacions.titol')}</p>
+      <div style={card}>
+        <div style={row}>
+          <span style={lbl}>{t('config.notificacions.canal')}</span>
+          <select
+            value={notif.notification_channel}
+            onChange={e => handleNotifChange('notification_channel', e.target.value)}
+            style={{ border: 'none', background: 'transparent', outline: 'none', color: 'var(--text)', fontSize: 15, textAlign: 'right' }}
+          >
+            <option value="whatsapp">{t('config.notificacions.whatsapp')}</option>
+            <option value="email">{t('config.notificacions.email')}</option>
+            <option value="none">{t('config.notificacions.cap')}</option>
+          </select>
+        </div>
+        {notif.notification_channel === 'email' && (
+          <>
+            <div style={divider} />
+            <div style={row}>
+              <span style={lbl}>{t('config.notificacions.remitent')}</span>
+              <input
+                type="text"
+                value={notif.notification_email_from}
+                onChange={e => handleNotifChange('notification_email_from', e.target.value)}
+                placeholder={t('config.notificacions.remitentHint')}
+                style={{ ...inputRight }}
+              />
+            </div>
+          </>
+        )}
+        {notifChanged && (
+          <>
+            <div style={divider} />
+            <div style={{ padding: '12px 16px' }}>
+              <button className="btn btn-primary" style={{ width: '100%' }} onClick={saveNotif} disabled={isPending}>
+                {t('config.notificacions.guardar')}
               </button>
             </div>
           </>

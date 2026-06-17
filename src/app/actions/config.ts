@@ -75,6 +75,22 @@ export async function saveDurations(id: string, lunch: number, dinner: number) {
   revalidatePath('/config')
 }
 
+export async function saveNotificationConfig(id: string, data: {
+  notification_channel: 'whatsapp' | 'email' | 'none'
+  notification_email_from: string
+}) {
+  const { supabase, role } = await getAuthRestaurant()
+  if (role !== 'owner') return { error: 'Sense permisos' }
+
+  const { error } = await supabase.from('restaurants').update({
+    notification_channel: data.notification_channel,
+    notification_email_from: data.notification_email_from.trim() || null,
+    updated_at: new Date().toISOString(),
+  }).eq('id', id)
+  if (error) throw error
+  revalidatePath('/config')
+}
+
 export async function getClosures(restaurantId: string) {
   const { supabase } = await getAuthRestaurant()
   const { data, error } = await supabase

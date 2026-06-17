@@ -252,6 +252,18 @@ const ca = {
       capacitatLabel:  'Capacitat',
       eliminarConfirm: 'Segur que vols eliminar aquesta taula? Aquesta acció no es pot desfer.',
     },
+    notificacions: {
+      titol:         'Canal de confirmacions',
+      descripcio:    'Com rep el client la confirmació de la reserva.',
+      canal:         'Canal',
+      whatsapp:      'WhatsApp',
+      email:         'Correu electrònic',
+      cap:           'Cap (gestió manual)',
+      remitent:      'Remitent visible al client',
+      remitentHint:  "Deixa-ho buit per usar el nom del restaurant",
+      guardar:       'Guardar',
+      guardat:       'Canvis guardats',
+    },
   },
 } as const
 
@@ -505,6 +517,18 @@ const es: DeepString<typeof ca> = {
       seccioLabel:     'Sección',
       capacitatLabel:  'Capacidad',
       eliminarConfirm: '¿Seguro que quieres eliminar esta mesa? Esta acción no se puede deshacer.',
+    },
+    notificacions: {
+      titol:         'Canal de confirmaciones',
+      descripcio:    'Cómo recibe el cliente la confirmación de la reserva.',
+      canal:         'Canal',
+      whatsapp:      'WhatsApp',
+      email:         'Correo electrónico',
+      cap:           'Ninguno (gestión manual)',
+      remitent:      'Remitente visible al cliente',
+      remitentHint:  'Déjalo vacío para usar el nombre del restaurante',
+      guardar:       'Guardar',
+      guardat:       'Cambios guardados',
     },
   },
 }

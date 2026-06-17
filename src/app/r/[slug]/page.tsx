@@ -19,7 +19,7 @@ export default async function WidgetPage({ params }: Props) {
 
   const { data: restaurant, error } = await supabase
     .from('restaurants')
-    .select('id, name, welcome_message, logo_url, address, city, weekly_hours, group_threshold')
+    .select('id, name, welcome_message, logo_url, address, city, weekly_hours, group_threshold, notification_channel')
     .eq('slug', slug)
     .single()
 

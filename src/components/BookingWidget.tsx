@@ -11,6 +11,7 @@ interface PublicRestaurant {
   name: string
   group_threshold: number
   weekly_hours: WeeklyHours
+  notification_channel: 'whatsapp' | 'email' | 'none'
 }
 
 interface Props {
@@ -23,6 +24,7 @@ interface BookingData {
   party_size: number
   name: string
   phone: string
+  email: string
   allergies: string[]
   special_occasion: string
 }
@@ -41,7 +43,7 @@ export default function BookingWidget({ restaurant }: Props) {
   const [step, setStep] = useState(1)
   const [data, setData] = useState<BookingData>({
     date: '', time: '', party_size: 2,
-    name: '', phone: '', allergies: [], special_occasion: '',
+    name: '', phone: '', email: '', allergies: [], special_occasion: '',
   })
   const [confirmed, setConfirmed] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -166,14 +168,18 @@ export default function BookingWidget({ restaurant }: Props) {
   function Step2() {
     const [localName, setLocalName] = useState(data.name)
     const [localPhone, setLocalPhone] = useState(data.phone)
+    const [localEmail, setLocalEmail] = useState(data.email)
     const [errors, setErrors] = useState<Record<string, string>>({})
+
+    const emailRequired = restaurant.notification_channel === 'email'
 
     function handleContinue() {
       const e: Record<string, string> = {}
       if (!localName.trim()) e.name = 'El nom és obligatori'
       if (!localPhone.trim()) e.phone = 'El telèfon és obligatori'
+      if (emailRequired && !localEmail.trim()) e.email = 'El correu és obligatori per rebre la confirmació'
       if (Object.keys(e).length) { setErrors(e); return }
-      setData(prev => ({ ...prev, name: localName.trim(), phone: localPhone.trim() }))
+      setData(prev => ({ ...prev, name: localName.trim(), phone: localPhone.trim(), email: localEmail.trim() }))
       setStep(3)
     }
 
@@ -211,6 +217,23 @@ export default function BookingWidget({ restaurant }: Props) {
               className="w-full px-3 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+          </div>
+          <div>
+            <label htmlFor="w-email" className="block text-sm font-semibold text-gray-700 mb-1">
+              Correu electrònic{' '}
+              {!emailRequired && <span className="font-normal text-gray-400">(opcional)</span>}
+            </label>
+            <input
+              id="w-email"
+              type="email"
+              value={localEmail}
+              onChange={e => { setLocalEmail(e.target.value); setErrors(p => ({ ...p, email: '' })) }}
+              placeholder="Ex: nom@exemple.com"
+              autoComplete="email"
+              required={emailRequired}
+              className="w-full px-3 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
           </div>
         </div>
 
@@ -256,6 +279,7 @@ export default function BookingWidget({ restaurant }: Props) {
             party_size: data.party_size,
             customer_name: data.name,
             customer_phone: data.phone,
+            customer_email: data.email || null,
             allergies: localAllergies,
             special_occasion: localOccasion.trim() || null,
           }),
