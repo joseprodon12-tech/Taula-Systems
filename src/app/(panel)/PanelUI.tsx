@@ -91,7 +91,7 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
 
       {/* Sidebar — desktop (lg+) */}
       <aside
-        className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 z-20 border-r"
+        className="hidden xl:flex flex-col fixed left-0 top-0 bottom-0 z-20 border-r"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{ width: isExpanded ? NAV_W : NAV_W_COMPACT, background: 'var(--bg)', borderColor: 'var(--border)', transition: 'width 0.2s ease', overflow: 'hidden' }}
@@ -132,15 +132,15 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
       </aside>
 
       {/* Main */}
-      <div className={`flex flex-col h-screen overflow-hidden ${compact ? 'lg:ml-12' : 'lg:ml-56'}`} style={{ transition: 'margin-left 0.2s ease' }}>
-        <header className="flex lg:hidden items-center justify-between px-4 py-3 border-b" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
+      <div className={`flex flex-col h-screen overflow-hidden ${compact ? 'xl:ml-12' : 'xl:ml-56'}`} style={{ transition: 'margin-left 0.2s ease' }}>
+        <header className="flex xl:hidden items-center justify-between px-4 py-3 border-b" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
           <span className="font-bold text-sm" style={{ color: 'var(--primary)' }}>Taula Systems</span>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
 
         {/* Bottom nav — mobile + tablet */}
-        <nav className="flex lg:hidden border-t" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
+        <nav className="flex xl:hidden border-t" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
           {navItems.map(({ href, icon: Icon, labelKey: tKey }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
@@ -156,7 +156,7 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
       {showFab && (
         <button
           onClick={() => setShowSheet(true)}
-          className="lg:hidden fixed z-40 flex items-center justify-center shadow-lg"
+          className="xl:hidden fixed z-40 flex items-center justify-center shadow-lg"
           style={{
             bottom: 80, right: 16,
             width: 56, height: 56,

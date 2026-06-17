@@ -917,7 +917,7 @@ export default function EquipClient({
         </button>
 
         {/* View toggle Setmana | Dia (hidden on mobile) */}
-        <div className="hidden lg:flex" style={{ borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div className="hidden xl:flex" style={{ borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden' }}>
           <button
             className={`btn btn-sm ${vista === 'setmana' ? 'btn-primary' : 'btn-ghost'}`}
             style={{ borderRadius: 0, border: 'none', minHeight: 32 }}
@@ -958,7 +958,7 @@ export default function EquipClient({
       </div>
 
       {/* ── Desktop view (grid or gantt) ── */}
-      <div className="hidden lg:block">
+      <div className="hidden xl:block">
         {vista === 'setmana'
           ? <DesktopGrid />
           : <EmployeeDayGantt
@@ -1019,7 +1019,7 @@ export default function EquipClient({
       </div>
 
       {/* ── Sidebar desktop ── */}
-      <aside className="hidden lg:block w-52 shrink-0">
+      <aside className="hidden xl:block w-52 shrink-0">
         <div className="card sticky top-0" style={{ maxHeight: 'calc(100vh - 48px)', overflowY: 'auto' }}>
           <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
             {t('avui.calendari')}
