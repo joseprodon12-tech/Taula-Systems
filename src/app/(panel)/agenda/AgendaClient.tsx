@@ -223,7 +223,7 @@ export default function AgendaClient({
     </div>
 
     {/* ── Sidebar desktop ── */}
-    <aside className="hidden md:block w-52 shrink-0">
+    <aside className="hidden lg:block w-52 shrink-0">
       <div className="card sticky top-0" style={{ maxHeight: 'calc(100vh - 48px)', overflowY: 'auto' }}>
         <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
           {t('avui.calendari')}
