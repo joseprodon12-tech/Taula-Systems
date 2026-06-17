@@ -70,22 +70,10 @@ async function sendViaSES(_params: SendEmailParams): Promise<void> {
   throw new Error('SES: not implemented yet')
 }
 
-async function sendViaGmailDev(params: SendEmailParams): Promise<void> {
-  // Gmail SMTP — NOMÉS per a proves locals, mai producció amb dades reals
-  // nodemailer no és una dependència del projecte; instal·la-la localment si cal
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
-  const nodemailer = require('nodemailer') as any
-  const user = process.env.GMAIL_DEV_USER
-  const pass = process.env.GMAIL_DEV_APP_PASSWORD
-  if (!user || !pass) throw new Error('GMAIL_DEV_USER o GMAIL_DEV_APP_PASSWORD no configurats')
-
-  const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user, pass } })
-  await transporter.sendMail({
-    from: `"${params.fromName}" <${user}>`,
-    to: params.to,
-    replyTo: params.replyTo,
-    subject: params.subject,
-    html: params.html,
-    text: params.text,
-  })
+async function sendViaGmailDev(_params: SendEmailParams): Promise<void> {
+  // Gmail SMTP és un stopgap de dev que requereix nodemailer instal·lat localment.
+  // No s'ha d'usar mai en producció. Per habilitar-lo:
+  //   pnpm add -D nodemailer @types/nodemailer
+  // i substitueix aquest throw per la implementació amb nodemailer.createTransport().
+  throw new Error('gmail-dev: instal·la nodemailer localment per usar aquest proveïdor')
 }
