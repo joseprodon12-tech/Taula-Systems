@@ -5,31 +5,18 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 export default function ResetPasswordPage() {
-  const [identifier, setIdentifier] = useState('')
-  const [loading, setLoading]       = useState(false)
-  const [sent, setSent]             = useState(false)
-  const [error, setError]           = useState('')
+  const [email, setEmail]     = useState('')
+  const [loading, setLoading] = useState(false)
+  const [sent, setSent]       = useState(false)
+  const [error, setError]     = useState('')
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
     setError('')
 
     const supabase = createClient()
-    let email = identifier.trim()
-
-    if (!email.includes('@')) {
-      const { data, error: rpcError } = await supabase
-        .rpc('get_email_by_username', { p_username: email })
-      if (rpcError || !data) {
-        setError('Usuari no trobat.')
-        setLoading(false)
-        return
-      }
-      email = data as string
-    }
-
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${location.origin}/auth/update-password`,
     })
 
@@ -63,24 +50,31 @@ export default function ResetPasswordPage() {
                 Correu enviat
               </p>
               <p style={{ fontSize: 13, color: '#6B6560', lineHeight: 1.6 }}>
-                T&apos;hem enviat un email amb l&apos;enllaç per recuperar la contrasenya.
+                S&apos;ha enviat l&apos;enllaç de recuperació a{' '}
+                <strong style={{ color: '#1A1A18' }}>{email.trim()}</strong>.
+              </p>
+              <p style={{ fontSize: 12, color: '#9CA3AF', marginTop: 12, lineHeight: 1.5 }}>
+                Revisa la carpeta de correu no desitjat si no l&apos;has rebut en uns minuts.
               </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: 24 }}>
-                <label htmlFor="identifier" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1A1A18', marginBottom: 6 }}>
-                  Usuari o correu
+                <label htmlFor="email" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1A1A18', marginBottom: 4 }}>
+                  Correu electrònic del compte
                 </label>
+                <p style={{ fontSize: 12, color: '#6B6560', marginBottom: 8 }}>
+                  El correu de recuperació s&apos;enviarà a aquesta adreça.
+                </p>
                 <input
-                  id="identifier"
-                  type="text"
+                  id="email"
+                  type="email"
                   required
-                  autoComplete="username"
+                  autoComplete="email"
                   autoCapitalize="none"
-                  value={identifier}
-                  onChange={e => setIdentifier(e.target.value)}
-                  placeholder="nom d'usuari o correu"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="correu@exemple.com"
                   style={{
                     display: 'block', width: '100%', boxSizing: 'border-box',
                     fontSize: 14, padding: '10px 12px', color: '#1A1A18',
@@ -108,7 +102,7 @@ export default function ResetPasswordPage() {
                   transition: 'background .15s',
                 }}
               >
-                {loading ? 'Enviant...' : 'Enviar enllaç'}
+                {loading ? 'Enviant...' : 'Enviar enllaç de recuperació'}
               </button>
             </form>
           )}
