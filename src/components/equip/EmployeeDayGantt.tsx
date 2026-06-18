@@ -256,7 +256,7 @@ export default function EmployeeDayGantt({
                       )}
 
                       {/* Shift bars */}
-                      {!absence && empShifts.map(shift => {
+                      {!absence && empShifts.map((shift, shiftIdx) => {
                         const barLeft = (toMin(shift.start_time) - axisStart) / totalMinutes * 100
                         const barWidth = (normEndMin(shift.start_time, shift.end_time) - toMin(shift.start_time)) / totalMinutes * 100
                         const barBg = shift.published ? emp.color : 'var(--draft-bg)'
@@ -294,7 +294,7 @@ export default function EmployeeDayGantt({
                             <span style={{ fontSize: 11, fontWeight: 700, color: barText, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {shift.start_time}–{shift.end_time}
                             </span>
-                            {empWarns.length > 0 && (
+                            {empWarns.length > 0 && (isOverlapRow || shiftIdx === 0) && (
                               <span title={empWarns.map(w => warningTitle(w.key)).join('\n')} style={{ display: 'flex', flexShrink: 0, marginLeft: 4 }}>
                                 <AlertTriangle size={10} style={{ color: isOverlapRow ? 'var(--state-noshow)' : 'var(--warning)' }} />
                               </span>

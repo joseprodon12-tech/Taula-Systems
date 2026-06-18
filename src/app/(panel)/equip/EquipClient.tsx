@@ -998,7 +998,7 @@ export default function EquipClient({
             : undefined}
           onAddTram={handleAddTram}
           onClose={() => setEditor(null)}
-          isMobile={typeof window !== 'undefined' && window.innerWidth < 768}
+          isMobile={typeof window !== 'undefined' && window.innerWidth < 1280}
         />
       )}
 
