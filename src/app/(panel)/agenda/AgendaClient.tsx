@@ -270,9 +270,10 @@ function ListaView({ reservations }: { reservations: Reservation[] }) {
 
   if (active.length === 0) {
     return (
-      <p style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
-        {t('avui.sense')}
-      </p>
+      <div style={{ padding: '32px 0', textAlign: 'center' }}>
+        <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 12 }}>Cap reserva aquest dia.</p>
+        <a href="/reserva/nova" className="btn btn-primary btn-sm">+ Nova reserva</a>
+      </div>
     )
   }
 

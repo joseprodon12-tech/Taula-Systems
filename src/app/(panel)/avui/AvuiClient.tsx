@@ -197,8 +197,9 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
               </ResponsiveContainer>
             </div>
           ) : (
-            <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-              <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>{t('avui.sense')}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '24px 0', marginBottom: 8 }}>
+              <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>Cap reserva per aquest dia.</p>
+              <a href={`/reserva/nova?data=${selectedDate}`} className="btn btn-primary btn-sm">+ Nova reserva</a>
             </div>
           )}
 
