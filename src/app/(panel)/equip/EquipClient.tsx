@@ -958,7 +958,7 @@ export default function EquipClient({
       </div>
 
       {/* ── Desktop view (grid or gantt) ── */}
-      <div className="hidden xl:block">
+      <div className="hidden md:block">
         {vista === 'setmana'
           ? <DesktopGrid />
           : <EmployeeDayGantt
