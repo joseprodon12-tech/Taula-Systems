@@ -91,7 +91,7 @@ export default function ReservationCard({ reservation: r }: Props) {
       )}
 
       {/* Action buttons */}
-      {isActionable && optimisticStatus !== 'cancelled' && (
+      {isActionable && (
         <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
           {optimisticStatus !== 'arrived' && (
             <button
