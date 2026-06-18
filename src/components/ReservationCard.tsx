@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useTransition, useState } from 'react'
 import { Phone, FileText, Users, CheckCircle, XCircle, RotateCcw, ChevronRight } from 'lucide-react'
 import { updateReservationStatus } from '@/app/actions/reservations'
 import { useT } from '@/context/LocaleContext'
@@ -21,13 +21,15 @@ interface Props {
 
 export default function ReservationCard({ reservation: r }: Props) {
   const [isPending, startTransition] = useTransition()
+  const [optimisticStatus, setOptimisticStatus] = useState(r.status)
   const { t } = useT()
 
   function setStatus(status: 'arrived' | 'no_show' | 'pending') {
+    setOptimisticStatus(status)
     startTransition(() => updateReservationStatus(r.id, status))
   }
 
-  const isActionable = r.status === 'pending' || r.status === 'arrived' || r.status === 'no_show'
+  const isActionable = optimisticStatus === 'pending' || optimisticStatus === 'arrived' || optimisticStatus === 'no_show'
 
   return (
     <div
@@ -50,8 +52,8 @@ export default function ReservationCard({ reservation: r }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <span className={`badge ${STATUS_CSS[r.status]}`}>
-            {t(`reserva.estats.${r.status}` as Parameters<typeof t>[0])}
+          <span className={`badge ${STATUS_CSS[optimisticStatus]}`}>
+            {t(`reserva.estats.${optimisticStatus}` as Parameters<typeof t>[0])}
           </span>
           <Link
             href={`/reserva/${r.id}`}
@@ -89,9 +91,9 @@ export default function ReservationCard({ reservation: r }: Props) {
       )}
 
       {/* Action buttons */}
-      {isActionable && r.status !== 'cancelled' && (
+      {isActionable && optimisticStatus !== 'cancelled' && (
         <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-          {r.status !== 'arrived' && (
+          {optimisticStatus !== 'arrived' && (
             <button
               className="btn btn-sm flex-1"
               disabled={isPending}
@@ -102,7 +104,7 @@ export default function ReservationCard({ reservation: r }: Props) {
               {t('reserva.estats.arrived')}
             </button>
           )}
-          {r.status === 'arrived' && (
+          {optimisticStatus === 'arrived' && (
             <button
               className="btn btn-sm flex-1"
               disabled={isPending}
@@ -113,7 +115,7 @@ export default function ReservationCard({ reservation: r }: Props) {
               Desfer
             </button>
           )}
-          {r.status !== 'no_show' && (
+          {optimisticStatus !== 'no_show' && (
             <button
               className="btn btn-sm flex-1"
               disabled={isPending}
@@ -124,7 +126,7 @@ export default function ReservationCard({ reservation: r }: Props) {
               {t('reserva.estats.no_show')}
             </button>
           )}
-          {r.status === 'no_show' && (
+          {optimisticStatus === 'no_show' && (
             <button
               className="btn btn-sm flex-1"
               disabled={isPending}
