@@ -958,7 +958,7 @@ export default function EquipClient({
       </div>
 
       {/* ── Desktop view (grid or gantt) ── */}
-      <div className="hidden md:block">
+      <div className="hidden xl:block">
         {vista === 'setmana'
           ? <DesktopGrid />
           : <EmployeeDayGantt
@@ -975,8 +975,8 @@ export default function EquipClient({
         }
       </div>
 
-      {/* ── Mobile view ── */}
-      <div className="md:hidden">
+      {/* ── Mobile + tablet view ── */}
+      <div className="xl:hidden">
         <MobileView />
       </div>
 
