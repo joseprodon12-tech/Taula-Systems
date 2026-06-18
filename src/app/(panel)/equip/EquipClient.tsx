@@ -10,6 +10,7 @@ import type { Employee, Shift, ShiftWithEmployee, Absence, WeeklyHours } from '@
 import {
   createShift, updateShift, deleteShift,
   duplicateWeek, publishWeek,
+  deleteShiftsForWeek, deleteShiftsForDay,
 } from '@/app/actions/equip'
 import ShiftEditor, { type ShiftFormData } from './ShiftEditor'
 import EmployeeDayGantt from '@/components/equip/EmployeeDayGantt'
@@ -303,6 +304,26 @@ export default function EquipClient({
         }
         return next
       })
+    })
+  }
+
+  function handleDeleteWeek() {
+    if (!confirm(t('equip.confirmarEliminarSetmana'))) return
+    const snapshot = { ...localShifts }
+    setLocalShifts(Object.fromEntries(days.map(d => [d.iso, [] as Shift[]])))
+    startTransition(async () => {
+      const res = await deleteShiftsForWeek(monday, sunday)
+      if ('error' in res) { setLocalShifts(snapshot); showToast(res.error, 'error') }
+    })
+  }
+
+  function handleDeleteDay(date: string) {
+    if (!confirm(t('equip.confirmarEliminarDia'))) return
+    const snapshot = { ...localShifts }
+    setLocalShifts(prev => ({ ...prev, [date]: [] }))
+    startTransition(async () => {
+      const res = await deleteShiftsForDay(date)
+      if ('error' in res) { setLocalShifts(snapshot); showToast(res.error, 'error') }
     })
   }
 
@@ -934,25 +955,49 @@ export default function EquipClient({
           </button>
         </div>
 
-        {/* Owner actions (setmana only) */}
-        {vista === 'setmana' && role === 'owner' && (
+        {/* Owner actions */}
+        {role === 'owner' && (
           <>
+            {vista === 'setmana' && (
+              <>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleDuplicate}
+                  disabled={isPending}
+                >
+                  {t('equip.duplicarSetmana')}
+                </button>
+                {draftCount > 0 && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={handlePublish}
+                    disabled={isPending}
+                  >
+                    {t('equip.publicar')} ({draftCount} {t('equip.esborranys')})
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Eliminar torns — desktop (xl+): context from vista/diaGantt */}
             <button
-              className="btn btn-secondary btn-sm"
-              onClick={handleDuplicate}
+              className="btn btn-ghost btn-sm hidden xl:inline-flex"
+              style={{ color: 'var(--state-noshow)' }}
+              onClick={vista === 'setmana' ? handleDeleteWeek : () => handleDeleteDay(diaGantt)}
               disabled={isPending}
             >
-              {t('equip.duplicarSetmana')}
+              {vista === 'setmana' ? t('equip.eliminarSetmana') : t('equip.eliminarDia')}
             </button>
-            {draftCount > 0 && (
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={handlePublish}
-                disabled={isPending}
-              >
-                {t('equip.publicar')} ({draftCount} {t('equip.esborranys')})
-              </button>
-            )}
+
+            {/* Eliminar torns — mòbil/iPad (<xl): context from mobileDay */}
+            <button
+              className="btn btn-ghost btn-sm xl:hidden"
+              style={{ color: 'var(--state-noshow)' }}
+              onClick={mobileDay !== 'tot' ? () => handleDeleteDay(mobileDay) : handleDeleteWeek}
+              disabled={isPending}
+            >
+              {mobileDay !== 'tot' ? t('equip.eliminarDia') : t('equip.eliminarSetmana')}
+            </button>
           </>
         )}
       </div>

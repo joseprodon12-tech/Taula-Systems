@@ -303,6 +303,46 @@ export async function deleteShift(id: string): Promise<{ ok: true } | { error: s
   return { ok: true }
 }
 
+export async function deleteShiftsForWeek(
+  monday: string,
+  sunday: string,
+): Promise<{ deleted: number } | { error: string }> {
+  const { supabase, restaurant, role } = await getAuthRestaurant()
+  if (role !== 'owner') return { error: 'Sense permisos' }
+
+  const { data, error } = await supabase
+    .from('shifts')
+    .delete()
+    .eq('restaurant_id', restaurant.id)
+    .gte('date', monday)
+    .lte('date', sunday)
+    .select('id')
+
+  if (error) return { error: "Error en eliminar els torns de la setmana" }
+
+  revalidatePath('/equip')
+  return { deleted: data?.length ?? 0 }
+}
+
+export async function deleteShiftsForDay(
+  date: string,
+): Promise<{ deleted: number } | { error: string }> {
+  const { supabase, restaurant, role } = await getAuthRestaurant()
+  if (role !== 'owner') return { error: 'Sense permisos' }
+
+  const { data, error } = await supabase
+    .from('shifts')
+    .delete()
+    .eq('restaurant_id', restaurant.id)
+    .eq('date', date)
+    .select('id')
+
+  if (error) return { error: "Error en eliminar els torns del dia" }
+
+  revalidatePath('/equip')
+  return { deleted: data?.length ?? 0 }
+}
+
 export async function duplicateWeek(
   fromMonday: string,
   toMonday: string,

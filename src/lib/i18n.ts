@@ -138,6 +138,10 @@ const ca = {
     publicar:         'Publicar setmana',
     publicats:        'horaris publicats',
     esborranys:       'esborranys',
+    eliminarSetmana:          'Eliminar torns setmana',
+    eliminarDia:              'Eliminar torns dia',
+    confirmarEliminarSetmana: 'Eliminar tots els torns d\'aquesta setmana? Aquesta acció no es pot desfer.',
+    confirmarEliminarDia:     'Eliminar tots els torns d\'aquest dia? Aquesta acció no es pot desfer.',
     gestionar:        'Gestionar empleats',
     empleats: {
       titol:             'Empleats',
@@ -404,6 +408,10 @@ const es: DeepString<typeof ca> = {
     publicar:         'Publicar semana',
     publicats:        'horarios publicados',
     esborranys:       'borradores',
+    eliminarSetmana:          'Eliminar turnos semana',
+    eliminarDia:              'Eliminar turnos día',
+    confirmarEliminarSetmana: 'Eliminar todos los turnos de esta semana? Esta acción no se puede deshacer.',
+    confirmarEliminarDia:     'Eliminar todos los turnos de este día? Esta acción no se puede deshacer.',
     gestionar:        'Gestionar empleados',
     empleats: {
       titol:             'Empleados',
