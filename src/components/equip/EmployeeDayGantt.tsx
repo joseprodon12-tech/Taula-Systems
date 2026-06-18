@@ -191,11 +191,11 @@ export default function EmployeeDayGantt({
 
             {/* Time axis header */}
             <div style={{ height: HEADER_H, borderBottom: '2px solid var(--border)', position: 'relative' }}>
-              {ticks.map(tick => (
+              {ticks.map((tick, i) => (
                 <span key={tick} style={{
                   position: 'absolute',
                   left: `${(tick - axisStart) / totalMinutes * 100}%`,
-                  transform: 'translateX(-50%)',
+                  transform: i === 0 ? 'none' : i === ticks.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
                   top: 8, fontSize: 11, color: 'var(--text-muted)', pointerEvents: 'none',
                 }}>
                   {fmtHour(tick)}
