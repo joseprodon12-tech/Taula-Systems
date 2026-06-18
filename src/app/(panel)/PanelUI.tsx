@@ -133,10 +133,10 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
 
       {/* Main */}
       <div className={`flex flex-col h-screen overflow-hidden ${compact ? 'xl:ml-12' : 'xl:ml-56'}`} style={{ transition: 'margin-left 0.2s ease' }}>
-        <main className="flex-1 overflow-y-auto px-2 py-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto px-2 pt-4 md:px-6 md:pt-6 pb-20 xl:pb-6">{children}</main>
 
-        {/* Bottom nav — mobile + tablet */}
-        <nav className="flex xl:hidden border-t" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
+        {/* Bottom nav — mobile + tablet, fixed so scroll never hides it */}
+        <nav className="flex xl:hidden border-t" style={{ background: 'var(--bg)', borderColor: 'var(--border)', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30 }}>
           {navItems.map(({ href, icon: Icon, labelKey: tKey }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (

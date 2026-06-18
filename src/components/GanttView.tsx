@@ -237,7 +237,7 @@ export default function GanttView({
   for (let gi = 0; gi < groups.length; gi++) {
     const rows: RowMeta[] = groups[gi].tables.map((tbl, ti) => ({
       tbl,
-      rowBg: bgIdx++ % 2 === 1 ? 'rgba(0,0,0,0.025)' : 'transparent',
+      rowBg: bgIdx++ % 2 === 1 ? 'rgba(0,0,0,0.04)' : '#ffffff',
       isLast: gi === groups.length - 1 && ti === groups[gi].tables.length - 1,
     }))
     groupMetas.push({ label: groups[gi].label, rows })
@@ -336,20 +336,20 @@ export default function GanttView({
   // Two-column layout: LEFT column is never inside a scroll container (fixes Safari sticky bug).
   // RIGHT column scrolls horizontally. Both have identical row heights via constants.
   return (
-    <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', border: '1px solid rgba(0,0,0,0.2)', borderRadius: 12, overflow: 'hidden' }}>
 
       {/* ── LEFT COLUMN: table labels, always visible ── */}
       <div style={{
         flexShrink: 0,
         width: tableColW,
-        borderRight: '1px solid var(--border)',
-        background: 'var(--bg)',
+        borderRight: '1px solid rgba(0,0,0,0.15)',
+        background: '#ffffff',
       }}>
         {/* Header corner — same surface as the hours header so it reads as one continuous bar */}
         <div style={{
           height: HEADER_H,
-          background: 'var(--surface)',
-          borderBottom: '2px solid var(--border)',
+          background: '#f3f4f6',
+          borderBottom: '2px solid rgba(0,0,0,0.15)',
         }} />
 
         {groupMetas.map((gm) => (
@@ -358,8 +358,8 @@ export default function GanttView({
               <div style={{
                 height: SEC_H,
                 display: 'flex', alignItems: 'center', paddingLeft: 12,
-                background: 'var(--surface)',
-                borderBottom: '1px solid var(--border)',
+                background: '#f3f4f6',
+                borderBottom: '1px solid rgba(0,0,0,0.12)',
               }}>
                 <span style={{
                   fontSize: 10, fontWeight: 700,
@@ -376,7 +376,7 @@ export default function GanttView({
                 display: 'flex', flexDirection: 'column', justifyContent: 'center',
                 paddingLeft: 12,
                 background: rowBg,
-                borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.15)',
+                borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.12)',
               }}>
                 <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{tbl.number}</span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tbl.capacity}p</span>
@@ -392,7 +392,7 @@ export default function GanttView({
         {/* Header: hour labels */}
         <div style={{
           position: 'relative', width: contentW, height: HEADER_H,
-          background: 'var(--surface)', borderBottom: '2px solid var(--border)',
+          background: '#f3f4f6', borderBottom: '2px solid rgba(0,0,0,0.15)',
         }}>
           {hourMarkers.map(m => (
             <span key={m.x} style={{
@@ -418,8 +418,8 @@ export default function GanttView({
             {hasBoth && (
               <div style={{
                 width: contentW, height: SEC_H,
-                background: 'var(--surface)',
-                borderBottom: '1px solid var(--border)',
+                background: '#f3f4f6',
+                borderBottom: '1px solid rgba(0,0,0,0.12)',
               }} />
             )}
 
@@ -446,7 +446,7 @@ export default function GanttView({
                   style={{
                     position: 'relative', width: contentW, height: ROW_H,
                     background: rowBg,
-                    borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.15)',
+                    borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.12)',
                     cursor: 'pointer',
                   }}
                   onClick={e => {
@@ -469,7 +469,7 @@ export default function GanttView({
                   {hourMarkers.map(m => (
                     <div key={m.x} style={{
                       position: 'absolute', left: m.x, top: 0, bottom: 0,
-                      width: 1, background: 'rgba(0,0,0,0.2)', pointerEvents: 'none', zIndex: 1,
+                      width: 1, background: 'rgba(0,0,0,0.25)', pointerEvents: 'none', zIndex: 1,
                     }} />
                   ))}
 
