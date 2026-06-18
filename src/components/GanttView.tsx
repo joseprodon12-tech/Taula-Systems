@@ -376,7 +376,7 @@ export default function GanttView({
                 display: 'flex', flexDirection: 'column', justifyContent: 'center',
                 paddingLeft: 12,
                 background: rowBg,
-                borderBottom: isLast ? 'none' : '1px solid var(--border)',
+                borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.15)',
               }}>
                 <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{tbl.number}</span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tbl.capacity}p</span>
@@ -446,7 +446,7 @@ export default function GanttView({
                   style={{
                     position: 'relative', width: contentW, height: ROW_H,
                     background: rowBg,
-                    borderBottom: isLast ? 'none' : '1px solid var(--border)',
+                    borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.15)',
                     cursor: 'pointer',
                   }}
                   onClick={e => {
@@ -469,7 +469,7 @@ export default function GanttView({
                   {hourMarkers.map(m => (
                     <div key={m.x} style={{
                       position: 'absolute', left: m.x, top: 0, bottom: 0,
-                      width: 1, background: 'rgba(0,0,0,0.1)', pointerEvents: 'none', zIndex: 1,
+                      width: 1, background: 'rgba(0,0,0,0.2)', pointerEvents: 'none', zIndex: 1,
                     }} />
                   ))}
 

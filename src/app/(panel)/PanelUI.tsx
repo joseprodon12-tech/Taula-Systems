@@ -133,11 +133,7 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
 
       {/* Main */}
       <div className={`flex flex-col h-screen overflow-hidden ${compact ? 'xl:ml-12' : 'xl:ml-56'}`} style={{ transition: 'margin-left 0.2s ease' }}>
-        <header className="flex xl:hidden items-center justify-between px-4 py-3 border-b" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
-          <span className="font-bold text-sm" style={{ color: 'var(--primary)' }}>Taula Systems</span>
-        </header>
-
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto px-2 py-4 md:p-6">{children}</main>
 
         {/* Bottom nav — mobile + tablet */}
         <nav className="flex xl:hidden border-t" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
