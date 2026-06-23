@@ -395,6 +395,44 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         )}
       </div>
 
+      {/* DIES TANCATS */}
+      <p style={sTitle}>{t('config.seccions.tancats')}</p>
+      <div style={card}>
+        {closureList.map((c, idx) => (
+          <div key={c.id}>
+            {idx > 0 && <div style={divider} />}
+            <div style={row}>
+              <div>
+                <span style={{ fontSize: 15, color: 'var(--text)' }}>{formatDate(c.date, locale)}</span>
+                {c.reason && <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 8 }}>{c.reason}</span>}
+              </div>
+              <button type="button" onClick={() => handleRemoveClosure(c.id)} disabled={isPending} style={{ ...iconBtn, color: '#EF4444' }}>
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+        ))}
+        {closureList.length > 0 && <div style={{ height: 1, background: 'var(--border)' }} />}
+        <div style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
+          <DatePicker
+            value={newDate}
+            onChange={setNewDate}
+            dropUp
+            style={{ flex: 1 }}
+          />
+          <input
+            className="input"
+            placeholder={t('config.tancats.motiu')}
+            value={newReason}
+            onChange={e => setNewReason(e.target.value)}
+            style={{ flex: 2 }}
+          />
+          <button className="btn btn-secondary" onClick={handleAddClosure} disabled={!newDate || isPending}>
+            <Plus size={15} />
+          </button>
+        </div>
+      </div>
+
       {/* TAULES */}
       <p style={sTitle}>{t('config.taules.titol')}</p>
       <div style={card}>
@@ -533,44 +571,6 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
             </div>
           </>
         )}
-      </div>
-
-      {/* DIES TANCATS */}
-      <p style={sTitle}>{t('config.seccions.tancats')}</p>
-      <div style={card}>
-        {closureList.map((c, idx) => (
-          <div key={c.id}>
-            {idx > 0 && <div style={divider} />}
-            <div style={row}>
-              <div>
-                <span style={{ fontSize: 15, color: 'var(--text)' }}>{formatDate(c.date, locale)}</span>
-                {c.reason && <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 8 }}>{c.reason}</span>}
-              </div>
-              <button type="button" onClick={() => handleRemoveClosure(c.id)} disabled={isPending} style={{ ...iconBtn, color: '#EF4444' }}>
-                <Trash2 size={14} />
-              </button>
-            </div>
-          </div>
-        ))}
-        {closureList.length > 0 && <div style={{ height: 1, background: 'var(--border)' }} />}
-        <div style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
-          <DatePicker
-            value={newDate}
-            onChange={setNewDate}
-            dropUp
-            style={{ flex: 1 }}
-          />
-          <input
-            className="input"
-            placeholder={t('config.tancats.motiu')}
-            value={newReason}
-            onChange={e => setNewReason(e.target.value)}
-            style={{ flex: 2 }}
-          />
-          <button className="btn btn-secondary" onClick={handleAddClosure} disabled={!newDate || isPending}>
-            <Plus size={15} />
-          </button>
-        </div>
       </div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hide} />}

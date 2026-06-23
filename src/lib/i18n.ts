@@ -217,7 +217,7 @@ const ca = {
     seccions: {
       restaurant: 'Restaurant',
       horaris:    'Horaris',
-      capacitat:  'Capacitat',
+      capacitat:  'Capacitat màxima',
       tancats:    'Dies tancats',
     },
     info: {
@@ -487,7 +487,7 @@ const es: DeepString<typeof ca> = {
     seccions: {
       restaurant: 'Restaurante',
       horaris:    'Horarios',
-      capacitat:  'Capacidad',
+      capacitat:  'Capacidad máxima',
       tancats:    'Días cerrados',
     },
     info: {

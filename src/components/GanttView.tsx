@@ -10,6 +10,9 @@ const GAP_PX         = 48
 const HEADER_H       = 36
 const SEC_H          = 26
 const DRAG_THRESHOLD = 6
+const ZOOM_MIN       = 0.3
+const ZOOM_MAX       = 3.0
+const ZOOM_STEP      = 0.25
 
 function ganttDimensions(tableCount: number): {
   rowH: number; slotPx: number; tableColW: number; tableColWMobile: number
@@ -117,7 +120,6 @@ function currentTimeStr(): string {
 }
 
 // ── Block colors ──────────────────────────────────────────────────────────────
-// standby + unassigned (no table_number) → dark slate; no_show → translucent red
 function blockBg(r: Reservation): string {
   if (r.status === 'no_show')  return 'rgba(220,50,50,0.30)'
   if (r.status === 'arrived')  return 'var(--block-arrived)'
@@ -150,16 +152,28 @@ export default function GanttView({
   const { t } = useT()
   const { rowH: ROW_H, slotPx: SLOT_PX, tableColW: TABLE_COL_W, tableColWMobile: TABLE_COL_W_MOBILE }
     = ganttDimensions(tables.length)
-  const PX_PER_MIN = SLOT_PX / SLOT_MIN
+  const BASE_PX_PER_MIN = SLOT_PX / SLOT_MIN
+
+  // ── Zoom ──────────────────────────────────────────────────────────────────
+  const [zoom, setZoom] = useState<number>(() => {
+    if (typeof window === 'undefined') return 1
+    const s = localStorage.getItem('gantt-zoom')
+    const v = s ? parseFloat(s) : 1
+    return isNaN(v) ? 1 : Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, v))
+  })
+  const zoomRef = useRef(zoom)
+  useEffect(() => { zoomRef.current = zoom }, [zoom])
+  useEffect(() => { localStorage.setItem('gantt-zoom', String(zoom)) }, [zoom])
+
+  const PX_PER_MIN = BASE_PX_PER_MIN * zoom
+  const SLOT_PX_Z  = SLOT_PX * zoom
+
   const segs     = buildSegs(lunchHours, dinnerHours, PX_PER_MIN)
   const contentW = totalWidth(segs, PX_PER_MIN)
 
   const [localReservations, setLocalReservations] = useState(reservations)
   useEffect(() => { setLocalReservations(reservations) }, [reservations])
 
-  // containerRef points to the RIGHT scrollable div — not the outer wrapper.
-  // This fixes the Safari bug: position:sticky doesn't work inside overflow-x:auto.
-  // The left column lives outside the scroll container entirely.
   const containerRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [ghost, setGhost] = useState<{ tableId: string; time: string; reservationId: string } | null>(null)
@@ -188,6 +202,43 @@ export default function GanttView({
     })
   }, [])
 
+  // ── Pinch-to-zoom ─────────────────────────────────────────────────────────
+  const pinchRef = useRef<{ startDist: number; startZoom: number } | null>(null)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    function onTouchStart(e: TouchEvent) {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        pinchRef.current = { startDist: Math.hypot(dx, dy), startZoom: zoomRef.current }
+      }
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (e.touches.length !== 2 || !pinchRef.current) return
+      e.preventDefault()
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      const dist = Math.hypot(dx, dy)
+      const raw = pinchRef.current.startZoom * (dist / pinchRef.current.startDist)
+      setZoom(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, raw)))
+    }
+
+    function onTouchEnd() { pinchRef.current = null }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [])
+
   const byTable = distribute(tables, localReservations)
 
   function isOverCapacity(r: Reservation): boolean {
@@ -212,11 +263,25 @@ export default function GanttView({
     </p>
   )
 
+  // Hour markers (solid lines + labels)
   const hourMarkers: { label: string; x: number }[] = []
   for (const s of segs) {
     const firstHour = Math.ceil(s.startMin / 60) * 60
     for (let m = firstHour; m <= s.endMin; m += 60)
       hourMarkers.push({ label: toTime(m), x: s.offsetPx + (m - s.startMin) * PX_PER_MIN })
+  }
+
+  // Quarter-hour markers (dashed lines, no label). Skip minutes that coincide with hours.
+  const quarterMarkers: { x: number; isHalf: boolean }[] = []
+  for (const s of segs) {
+    const first15 = Math.ceil(s.startMin / 15) * 15
+    for (let m = first15; m < s.endMin; m += 15) {
+      if (m % 60 === 0) continue
+      quarterMarkers.push({
+        x: s.offsetPx + (m - s.startMin) * PX_PER_MIN,
+        isHalf: m % 30 === 0,
+      })
+    }
   }
 
   const isToday = date === todayIso()
@@ -230,7 +295,6 @@ export default function GanttView({
   if (indoorTables.length)  groups.push({ label: t('config.taules.sala'),     tables: indoorTables })
   if (outdoorTables.length) groups.push({ label: t('config.taules.terrassa'), tables: outdoorTables })
 
-  // Pre-compute per-row metadata so left column and right content stay in sync
   type RowMeta = { tbl: Table; rowBg: string; isLast: boolean }
   const groupMetas: { label: string; rows: RowMeta[] }[] = []
   let bgIdx = 0
@@ -243,7 +307,6 @@ export default function GanttView({
     groupMetas.push({ label: groups[gi].label, rows })
   }
 
-  // Y positions for drag hit-testing — relative to containerRef (right content) top
   const tableRows: { id: string; yStart: number; yEnd: number }[] = []
   let rowY = HEADER_H
   for (const gm of groupMetas) {
@@ -258,10 +321,9 @@ export default function GanttView({
     const container = containerRef.current
     if (!container) return null
     const rect = container.getBoundingClientRect()
-    // x: relative to right content area (no tableColW subtraction — container starts after it)
     const x = clientX - rect.left + container.scrollLeft
     const y = clientY - rect.top
-    const time = xToTime(x, segs, SLOT_PX)
+    const time = xToTime(x, segs, SLOT_PX_Z)
     const tRow = tableRows.find(tr => y >= tr.yStart && y < tr.yEnd)
     return time && tRow ? { time, tableId: tRow.id } : null
   }
@@ -332,232 +394,275 @@ export default function GanttView({
     window.addEventListener('pointerup', onUp)
   }
 
+  // ── Zoom button style ─────────────────────────────────────────────────────
+  const zoomBtnStyle: React.CSSProperties = {
+    width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)',
+    background: 'var(--bg)', color: 'var(--text-muted)', fontSize: 16, lineHeight: 1,
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────────
-  // Two-column layout: LEFT column is never inside a scroll container (fixes Safari sticky bug).
-  // RIGHT column scrolls horizontally. Both have identical row heights via constants.
   return (
-    <div style={{ display: 'flex', border: '1px solid rgba(0,0,0,0.2)', borderRadius: 12, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
 
-      {/* ── LEFT COLUMN: table labels, always visible ── */}
-      <div style={{
-        flexShrink: 0,
-        width: tableColW,
-        borderRight: '1px solid rgba(0,0,0,0.15)',
-        background: '#ffffff',
-      }}>
-        {/* Header corner — same surface as the hours header so it reads as one continuous bar */}
-        <div style={{
-          height: HEADER_H,
-          background: '#f3f4f6',
-          borderBottom: '2px solid rgba(0,0,0,0.15)',
-        }} />
-
-        {groupMetas.map((gm) => (
-          <Fragment key={gm.label}>
-            {hasBoth && (
-              <div style={{
-                height: SEC_H,
-                display: 'flex', alignItems: 'center', paddingLeft: 12,
-                background: '#f3f4f6',
-                borderBottom: '1px solid rgba(0,0,0,0.12)',
-              }}>
-                <span style={{
-                  fontSize: 10, fontWeight: 700,
-                  letterSpacing: '0.1em', textTransform: 'uppercase',
-                  color: 'var(--text-muted)',
-                }}>
-                  {gm.label}
-                </span>
-              </div>
-            )}
-            {gm.rows.map(({ tbl, rowBg, isLast }) => (
-              <div key={tbl.id} style={{
-                height: ROW_H,
-                display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                paddingLeft: 12,
-                background: rowBg,
-                borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.12)',
-              }}>
-                <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{tbl.number}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tbl.capacity}p</span>
-              </div>
-            ))}
-          </Fragment>
-        ))}
+      {/* Zoom controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+        <button
+          style={zoomBtnStyle}
+          onClick={() => setZoom(z => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2)))}
+          title="Allunyar"
+          aria-label="Zoom out"
+        >−</button>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 32, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+          {Math.round(zoom * 100)}%
+        </span>
+        <button
+          style={zoomBtnStyle}
+          onClick={() => setZoom(z => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2)))}
+          title="Apropar"
+          aria-label="Zoom in"
+        >+</button>
+        {zoom !== 1 && (
+          <button
+            style={{ ...zoomBtnStyle, fontSize: 11, width: 'auto', padding: '0 8px' }}
+            onClick={() => setZoom(1)}
+            title="Restablir zoom"
+          >↺</button>
+        )}
       </div>
 
-      {/* ── RIGHT CONTENT: scrolls horizontally ── */}
-      <div ref={containerRef} style={{ flex: 1, overflowX: 'auto', position: 'relative' }}>
+      {/* Gantt grid */}
+      <div style={{ display: 'flex', border: '1px solid rgba(0,0,0,0.2)', borderRadius: 12, overflow: 'hidden' }}>
 
-        {/* Header: hour labels */}
+        {/* ── LEFT COLUMN: table labels, always visible ── */}
         <div style={{
-          position: 'relative', width: contentW, height: HEADER_H,
-          background: '#f3f4f6', borderBottom: '2px solid rgba(0,0,0,0.15)',
+          flexShrink: 0,
+          width: tableColW,
+          borderRight: '1px solid rgba(0,0,0,0.15)',
+          background: '#ffffff',
         }}>
-          {hourMarkers.map(m => (
-            <span key={m.x} style={{
-              position: 'absolute', left: m.x, top: '50%',
-              transform: m.x < 24 ? 'translateY(-50%)' : 'translate(-50%,-50%)',
-              fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap',
-            }}>{m.label}</span>
-          ))}
-          {segs.slice(0, -1).map((s, i) => (
-            <span key={i} style={{
-              position: 'absolute',
-              left: s.offsetPx + (s.endMin - s.startMin) * PX_PER_MIN + GAP_PX / 2,
-              top: '50%', transform: 'translate(-50%,-50%)',
-              fontSize: 11, color: 'var(--text-muted)', letterSpacing: 3,
-            }}>···</span>
+          <div style={{
+            height: HEADER_H,
+            background: '#f3f4f6',
+            borderBottom: '2px solid rgba(0,0,0,0.15)',
+          }} />
+
+          {groupMetas.map((gm) => (
+            <Fragment key={gm.label}>
+              {hasBoth && (
+                <div style={{
+                  height: SEC_H,
+                  display: 'flex', alignItems: 'center', paddingLeft: 12,
+                  background: '#f3f4f6',
+                  borderBottom: '1px solid rgba(0,0,0,0.12)',
+                }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700,
+                    letterSpacing: '0.1em', textTransform: 'uppercase',
+                    color: 'var(--text-muted)',
+                  }}>
+                    {gm.label}
+                  </span>
+                </div>
+              )}
+              {gm.rows.map(({ tbl, rowBg, isLast }) => (
+                <div key={tbl.id} style={{
+                  height: ROW_H,
+                  display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                  paddingLeft: 12,
+                  background: rowBg,
+                  borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.12)',
+                }}>
+                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{tbl.number}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tbl.capacity}p</span>
+                </div>
+              ))}
+            </Fragment>
           ))}
         </div>
 
-        {/* Rows */}
-        {groupMetas.map((gm) => (
-          <Fragment key={gm.label}>
-            {/* Section spacer — mirrors left column section label height */}
-            {hasBoth && (
-              <div style={{
-                width: contentW, height: SEC_H,
-                background: '#f3f4f6',
-                borderBottom: '1px solid rgba(0,0,0,0.12)',
-              }} />
-            )}
+        {/* ── RIGHT CONTENT: scrolls horizontally ── */}
+        <div ref={containerRef} style={{ flex: 1, overflowX: 'auto', position: 'relative' }}>
 
-            {gm.rows.map(({ tbl, rowBg, isLast }) => {
-              let ghostEl: React.ReactNode = null
-              if (ghost?.tableId === tbl.id) {
-                const gx = timeToX(ghost.time, segs, PX_PER_MIN)
-                const ghostRes = gx !== null ? localReservations.find(res => res.id === ghost.reservationId) : null
-                if (gx !== null && ghostRes) {
-                  const gw = Math.max(Math.min(ghostRes.duration_minutes * PX_PER_MIN, contentW - gx) - 4, 8)
-                  ghostEl = (
-                    <div key="ghost" style={{
-                      position: 'absolute', left: gx + 2, top: 6, width: gw, height: ROW_H - 12,
-                      border: `2px dashed ${blockBg(ghostRes)}`,
-                      borderRadius: 6, pointerEvents: 'none', boxSizing: 'border-box', zIndex: 4,
-                    }} />
-                  )
-                }
-              }
-
-              return (
-                <div
-                  key={tbl.id}
-                  style={{
-                    position: 'relative', width: contentW, height: ROW_H,
-                    background: rowBg,
-                    borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.12)',
-                    cursor: 'pointer',
-                  }}
-                  onClick={e => {
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                    const time = xToTime(e.clientX - rect.left, segs, SLOT_PX)
-                    if (time) onSlotClick(tbl.id, time)
-                  }}
-                >
-                  {/* Gap hatching */}
-                  {segs.slice(0, -1).map((s, i) => (
-                    <div key={i} style={{
-                      position: 'absolute', pointerEvents: 'none', zIndex: 0,
-                      left: s.offsetPx + (s.endMin - s.startMin) * PX_PER_MIN,
-                      width: GAP_PX, top: 0, bottom: 0,
-                      background: 'repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(0,0,0,0.05) 3px,rgba(0,0,0,0.05) 6px)',
-                    }} />
-                  ))}
-
-                  {/* Hour lines */}
-                  {hourMarkers.map(m => (
-                    <div key={m.x} style={{
-                      position: 'absolute', left: m.x, top: 0, bottom: 0,
-                      width: 1, background: 'rgba(0,0,0,0.25)', pointerEvents: 'none', zIndex: 1,
-                    }} />
-                  ))}
-
-                  {/* Reservation blocks */}
-                  {(byTable.get(tbl.id) ?? []).map(r => {
-                    const x = timeToX(r.time, segs, PX_PER_MIN)
-                    if (x === null) return null
-                    const w = Math.max(Math.min(r.duration_minutes * PX_PER_MIN, contentW - x) - 4, 8)
-                    const isDragging = draggingId === r.id
-                    return (
-                      <div
-                        key={r.id}
-                        title={`${r.customer_name} · ×${r.party_size} · ${r.time}`}
-                        onPointerDown={e => startDrag(e, r, tbl.id)}
-                        onClick={e => e.stopPropagation()}
-                        style={{
-                          position: 'absolute', left: x + 2, top: 6, width: w, height: ROW_H - 12,
-                          background: blockBg(r),
-                          borderRadius: 6,
-                          border: '1px solid rgba(0,0,0,0.15)',
-                          cursor: onReservationMove ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
-                          overflow: 'hidden',
-                          padding: '3px 7px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                          opacity: isDragging ? 0.4 : 1,
-                          boxShadow: '0 1px 4px rgba(0,0,0,0.22)',
-                          touchAction: 'none',
-                          userSelect: 'none',
-                          WebkitUserSelect: 'none',
-                          WebkitTouchCallout: 'none',
-                          zIndex: 2,
-                        } as React.CSSProperties}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
-                          {(r.status === 'standby' || !r.table_number || isOverCapacity(r)) && w >= 40 && (
-                            <span style={{ fontSize: 14, lineHeight: 1, color: '#FCD34D', flexShrink: 0 }}>⚠</span>
-                          )}
-                          <span style={{
-                            fontSize: 14, fontWeight: 700,
-                            color: blockFg(r),
-                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                          }}>
-                            {w < 60
-                              ? `×${r.party_size}`
-                              : w < 100
-                                ? r.customer_name.split(' ').map(n => n[0]).join('').slice(0, 3).toUpperCase()
-                                : r.customer_name}
-                          </span>
-                        </div>
-                        {w >= 60 && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
-                            <span style={{ fontSize: 13, whiteSpace: 'nowrap', color: blockSubFg(r) }}>
-                              ×{r.party_size}
-                            </span>
-                            {r.notes && (
-                              <span style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: blockSubFg(r), fontStyle: 'italic' }}>
-                                {r.notes.length > 8 ? r.notes.slice(0, 8) + '…' : r.notes}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-
-                  {ghostEl}
-                </div>
-              )
-            })}
-          </Fragment>
-        ))}
-        {/* Single spanning now line — covers header + all rows top to bottom */}
-        {nowX !== null && (
+          {/* Header: hour labels */}
           <div style={{
-            position: 'absolute', left: nowX, top: 0, bottom: 0,
-            width: 2, background: 'var(--primary)', pointerEvents: 'none', zIndex: 3,
-            borderRadius: 1,
+            position: 'relative', width: contentW, height: HEADER_H,
+            background: '#f3f4f6', borderBottom: '2px solid rgba(0,0,0,0.15)',
           }}>
-            {/* Circle dot at the header/row boundary */}
-            <div style={{
-              position: 'absolute',
-              top: HEADER_H - 4,
-              left: -3,
-              width: 8, height: 8,
-              borderRadius: '50%',
-              background: 'var(--primary)',
-            }} />
+            {hourMarkers.map(m => (
+              <span key={m.x} style={{
+                position: 'absolute', left: m.x, top: '50%',
+                transform: m.x < 24 ? 'translateY(-50%)' : 'translate(-50%,-50%)',
+                fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap',
+              }}>{m.label}</span>
+            ))}
+            {segs.slice(0, -1).map((s, i) => (
+              <span key={i} style={{
+                position: 'absolute',
+                left: s.offsetPx + (s.endMin - s.startMin) * PX_PER_MIN + GAP_PX / 2,
+                top: '50%', transform: 'translate(-50%,-50%)',
+                fontSize: 11, color: 'var(--text-muted)', letterSpacing: 3,
+              }}>···</span>
+            ))}
           </div>
-        )}
+
+          {/* Rows */}
+          {groupMetas.map((gm) => (
+            <Fragment key={gm.label}>
+              {hasBoth && (
+                <div style={{
+                  width: contentW, height: SEC_H,
+                  background: '#f3f4f6',
+                  borderBottom: '1px solid rgba(0,0,0,0.12)',
+                }} />
+              )}
+
+              {gm.rows.map(({ tbl, rowBg, isLast }) => {
+                let ghostEl: React.ReactNode = null
+                if (ghost?.tableId === tbl.id) {
+                  const gx = timeToX(ghost.time, segs, PX_PER_MIN)
+                  const ghostRes = gx !== null ? localReservations.find(res => res.id === ghost.reservationId) : null
+                  if (gx !== null && ghostRes) {
+                    const gw = Math.max(Math.min(ghostRes.duration_minutes * PX_PER_MIN, contentW - gx) - 4, 8)
+                    ghostEl = (
+                      <div key="ghost" style={{
+                        position: 'absolute', left: gx + 2, top: 6, width: gw, height: ROW_H - 12,
+                        border: `2px dashed ${blockBg(ghostRes)}`,
+                        borderRadius: 6, pointerEvents: 'none', boxSizing: 'border-box', zIndex: 4,
+                      }} />
+                    )
+                  }
+                }
+
+                return (
+                  <div
+                    key={tbl.id}
+                    style={{
+                      position: 'relative', width: contentW, height: ROW_H,
+                      background: rowBg,
+                      borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.12)',
+                      cursor: 'pointer',
+                    }}
+                    onClick={e => {
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                      const time = xToTime(e.clientX - rect.left, segs, SLOT_PX_Z)
+                      if (time) onSlotClick(tbl.id, time)
+                    }}
+                  >
+                    {/* Gap hatching */}
+                    {segs.slice(0, -1).map((s, i) => (
+                      <div key={i} style={{
+                        position: 'absolute', pointerEvents: 'none', zIndex: 0,
+                        left: s.offsetPx + (s.endMin - s.startMin) * PX_PER_MIN,
+                        width: GAP_PX, top: 0, bottom: 0,
+                        background: 'repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(0,0,0,0.05) 3px,rgba(0,0,0,0.05) 6px)',
+                      }} />
+                    ))}
+
+                    {/* Quarter-hour dashed lines */}
+                    {quarterMarkers.map((q, qi) => (
+                      <div key={qi} style={{
+                        position: 'absolute', left: q.x, top: 0, bottom: 0, width: 1,
+                        borderLeft: `1px dashed ${q.isHalf ? 'rgba(0,0,0,0.14)' : 'rgba(0,0,0,0.08)'}`,
+                        pointerEvents: 'none', zIndex: 1,
+                      }} />
+                    ))}
+
+                    {/* Hour solid lines */}
+                    {hourMarkers.map(m => (
+                      <div key={m.x} style={{
+                        position: 'absolute', left: m.x, top: 0, bottom: 0,
+                        width: 1, background: 'rgba(0,0,0,0.25)', pointerEvents: 'none', zIndex: 1,
+                      }} />
+                    ))}
+
+                    {/* Reservation blocks */}
+                    {(byTable.get(tbl.id) ?? []).map(r => {
+                      const x = timeToX(r.time, segs, PX_PER_MIN)
+                      if (x === null) return null
+                      const w = Math.max(Math.min(r.duration_minutes * PX_PER_MIN, contentW - x) - 4, 8)
+                      const isDragging = draggingId === r.id
+                      return (
+                        <div
+                          key={r.id}
+                          title={`${r.customer_name} · ×${r.party_size} · ${r.time}`}
+                          onPointerDown={e => startDrag(e, r, tbl.id)}
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            position: 'absolute', left: x + 2, top: 6, width: w, height: ROW_H - 12,
+                            background: blockBg(r),
+                            borderRadius: 6,
+                            border: '1px solid rgba(0,0,0,0.15)',
+                            cursor: onReservationMove ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
+                            overflow: 'hidden',
+                            padding: '3px 7px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                            opacity: isDragging ? 0.4 : 1,
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.22)',
+                            touchAction: 'none',
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            WebkitTouchCallout: 'none',
+                            zIndex: 2,
+                          } as React.CSSProperties}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
+                            {(r.status === 'standby' || !r.table_number || isOverCapacity(r)) && w >= 40 && (
+                              <span style={{ fontSize: 14, lineHeight: 1, color: '#FCD34D', flexShrink: 0 }}>⚠</span>
+                            )}
+                            <span style={{
+                              fontSize: 14, fontWeight: 700,
+                              color: blockFg(r),
+                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>
+                              {w < 60
+                                ? `×${r.party_size}`
+                                : w < 100
+                                  ? r.customer_name.split(' ').map(n => n[0]).join('').slice(0, 3).toUpperCase()
+                                  : r.customer_name}
+                            </span>
+                          </div>
+                          {w >= 60 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                              <span style={{ fontSize: 13, whiteSpace: 'nowrap', color: blockSubFg(r) }}>
+                                ×{r.party_size}
+                              </span>
+                              {r.notes && (
+                                <span style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: blockSubFg(r), fontStyle: 'italic' }}>
+                                  {r.notes.length > 8 ? r.notes.slice(0, 8) + '…' : r.notes}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+
+                    {ghostEl}
+                  </div>
+                )
+              })}
+            </Fragment>
+          ))}
+
+          {/* Now line */}
+          {nowX !== null && (
+            <div style={{
+              position: 'absolute', left: nowX, top: 0, bottom: 0,
+              width: 2, background: 'var(--primary)', pointerEvents: 'none', zIndex: 3,
+              borderRadius: 1,
+            }}>
+              <div style={{
+                position: 'absolute',
+                top: HEADER_H - 4,
+                left: -3,
+                width: 8, height: 8,
+                borderRadius: '50%',
+                background: 'var(--primary)',
+              }} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -147,7 +147,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           return
         }
         if (result.warning) show(result.warning, 'error')
-        router.push(`/avui?data=${date}&created=1`)
+        router.push('/agenda')
       }
     })
   }
@@ -298,7 +298,11 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                   >
                     −
                   </button>
-                  <span style={{ flex: 1, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
+                  <span style={{
+                    flex: 1, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, fontSize: 16,
+                    background: 'var(--primary)', color: 'white', borderRadius: 8,
+                  }}>
                     {partySize}
                   </span>
                   <button
@@ -368,9 +372,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         {/* Fila 4: Telèfon */}
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block' }}>
-            <span className="label">
-              {t('reserva.camps.telefon')} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{t('reserva.camps.opcional')}</span>
-            </span>
+            <span className="label">{t('reserva.camps.telefon')}</span>
             <input
               type="tel"
               className="input"
