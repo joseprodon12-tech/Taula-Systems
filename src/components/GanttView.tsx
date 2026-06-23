@@ -167,6 +167,9 @@ export default function GanttView({
 
   const PX_PER_MIN = BASE_PX_PER_MIN * zoom
   const SLOT_PX_Z  = SLOT_PX * zoom
+  const ROW_H_Z    = Math.max(22, Math.round(ROW_H * zoom))
+  const HEADER_H_Z = Math.max(20, Math.round(HEADER_H * zoom))
+  const SEC_H_Z    = Math.max(14, Math.round(SEC_H * zoom))
 
   const segs     = buildSegs(lunchHours, dinnerHours, PX_PER_MIN)
   const contentW = totalWidth(segs, PX_PER_MIN)
@@ -308,12 +311,12 @@ export default function GanttView({
   }
 
   const tableRows: { id: string; yStart: number; yEnd: number }[] = []
-  let rowY = HEADER_H
+  let rowY = HEADER_H_Z
   for (const gm of groupMetas) {
-    if (hasBoth) rowY += SEC_H
+    if (hasBoth) rowY += SEC_H_Z
     for (const { tbl } of gm.rows) {
-      tableRows.push({ id: tbl.id, yStart: rowY, yEnd: rowY + ROW_H })
-      rowY += ROW_H
+      tableRows.push({ id: tbl.id, yStart: rowY, yEnd: rowY + ROW_H_Z })
+      rowY += ROW_H_Z
     }
   }
 
@@ -443,7 +446,7 @@ export default function GanttView({
           background: '#ffffff',
         }}>
           <div style={{
-            height: HEADER_H,
+            height: HEADER_H_Z,
             background: '#f3f4f6',
             borderBottom: '2px solid rgba(0,0,0,0.15)',
           }} />
@@ -452,13 +455,14 @@ export default function GanttView({
             <Fragment key={gm.label}>
               {hasBoth && (
                 <div style={{
-                  height: SEC_H,
+                  height: SEC_H_Z,
                   display: 'flex', alignItems: 'center', paddingLeft: 12,
                   background: '#f3f4f6',
                   borderBottom: '1px solid rgba(0,0,0,0.12)',
+                  overflow: 'hidden',
                 }}>
                   <span style={{
-                    fontSize: 10, fontWeight: 700,
+                    fontSize: Math.max(8, Math.round(10 * zoom)), fontWeight: 700,
                     letterSpacing: '0.1em', textTransform: 'uppercase',
                     color: 'var(--text-muted)',
                   }}>
@@ -468,14 +472,15 @@ export default function GanttView({
               )}
               {gm.rows.map(({ tbl, rowBg, isLast }) => (
                 <div key={tbl.id} style={{
-                  height: ROW_H,
+                  height: ROW_H_Z,
                   display: 'flex', flexDirection: 'column', justifyContent: 'center',
                   paddingLeft: 12,
                   background: rowBg,
                   borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.12)',
+                  overflow: 'hidden',
                 }}>
-                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{tbl.number}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tbl.capacity}p</span>
+                  <span style={{ fontWeight: 600, fontSize: Math.max(9, Math.round(13 * zoom)), color: 'var(--text)', lineHeight: 1.2 }}>{tbl.number}</span>
+                  {ROW_H_Z > 30 && <span style={{ fontSize: Math.max(8, Math.round(11 * zoom)), color: 'var(--text-muted)', lineHeight: 1.2 }}>{tbl.capacity}p</span>}
                 </div>
               ))}
             </Fragment>
@@ -487,7 +492,7 @@ export default function GanttView({
 
           {/* Header: hour labels */}
           <div style={{
-            position: 'relative', width: contentW, height: HEADER_H,
+            position: 'relative', width: contentW, height: HEADER_H_Z,
             background: '#f3f4f6', borderBottom: '2px solid rgba(0,0,0,0.15)',
           }}>
             {hourMarkers.map(m => (
@@ -512,13 +517,14 @@ export default function GanttView({
             <Fragment key={gm.label}>
               {hasBoth && (
                 <div style={{
-                  width: contentW, height: SEC_H,
+                  width: contentW, height: SEC_H_Z,
                   background: '#f3f4f6',
                   borderBottom: '1px solid rgba(0,0,0,0.12)',
                 }} />
               )}
 
               {gm.rows.map(({ tbl, rowBg, isLast }) => {
+                const barPad = Math.max(3, Math.round(6 * zoom))
                 let ghostEl: React.ReactNode = null
                 if (ghost?.tableId === tbl.id) {
                   const gx = timeToX(ghost.time, segs, PX_PER_MIN)
@@ -527,7 +533,7 @@ export default function GanttView({
                     const gw = Math.max(Math.min(ghostRes.duration_minutes * PX_PER_MIN, contentW - gx) - 4, 8)
                     ghostEl = (
                       <div key="ghost" style={{
-                        position: 'absolute', left: gx + 2, top: 6, width: gw, height: ROW_H - 12,
+                        position: 'absolute', left: gx + 2, top: barPad, width: gw, height: ROW_H_Z - barPad * 2,
                         border: `2px dashed ${blockBg(ghostRes)}`,
                         borderRadius: 6, pointerEvents: 'none', boxSizing: 'border-box', zIndex: 4,
                       }} />
@@ -539,7 +545,7 @@ export default function GanttView({
                   <div
                     key={tbl.id}
                     style={{
-                      position: 'relative', width: contentW, height: ROW_H,
+                      position: 'relative', width: contentW, height: ROW_H_Z,
                       background: rowBg,
                       borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.12)',
                       cursor: 'pointer',
@@ -590,7 +596,7 @@ export default function GanttView({
                           onPointerDown={e => startDrag(e, r, tbl.id)}
                           onClick={e => e.stopPropagation()}
                           style={{
-                            position: 'absolute', left: x + 2, top: 6, width: w, height: ROW_H - 12,
+                            position: 'absolute', left: x + 2, top: barPad, width: w, height: ROW_H_Z - barPad * 2,
                             background: blockBg(r),
                             borderRadius: 6,
                             border: '1px solid rgba(0,0,0,0.15)',
@@ -654,7 +660,7 @@ export default function GanttView({
             }}>
               <div style={{
                 position: 'absolute',
-                top: HEADER_H - 4,
+                top: HEADER_H_Z - 4,
                 left: -3,
                 width: 8, height: 8,
                 borderRadius: '50%',
