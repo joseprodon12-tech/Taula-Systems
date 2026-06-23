@@ -1,5 +1,5 @@
 import type { Restaurant, Reservation, NotificationKind, NotificationResult } from './types'
-import { sendWhatsAppTwilio } from './channels/whatsapp-twilio'
+import { sendWhatsAppTwilio, sendOwnerAlertTwilio } from './channels/whatsapp-twilio'
 import { sendWhatsAppMeta } from './channels/whatsapp-meta'
 import { sendEmail } from './channels/email'
 
@@ -26,6 +26,20 @@ export async function sendReservationNotification(
     }
   } catch (err) {
     console.error('notification error', { restaurantId: restaurant.id, kind, err })
+    return { skipped: true, reason: 'provider_error' }
+  }
+}
+
+export async function sendOwnerAlert(
+  restaurant: Restaurant,
+  reservation: Reservation,
+): Promise<NotificationResult> {
+  try {
+    if (!restaurant.whatsapp_number) return { skipped: true, reason: 'no_phone' }
+    // Owner alerts always via Twilio regardless of customer channel
+    return sendOwnerAlertTwilio(restaurant, reservation)
+  } catch (err) {
+    console.error('owner alert error', { restaurantId: restaurant.id, err })
     return { skipped: true, reason: 'provider_error' }
   }
 }

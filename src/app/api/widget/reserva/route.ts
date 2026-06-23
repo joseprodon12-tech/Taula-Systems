@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAvailableSlots } from '@/lib/schedule'
-import { sendReservationNotification } from '@/lib/notifications'
+import { sendReservationNotification, sendOwnerAlert } from '@/lib/notifications'
 
 export async function POST(request: NextRequest) {
   try {
@@ -119,7 +119,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Error en guardar la reserva' }, { status: 500 })
     }
 
-    await sendReservationNotification(restaurant, data, 'confirmation')
+    await Promise.all([
+      sendReservationNotification(restaurant, data, 'confirmation'),
+      sendOwnerAlert(restaurant, data),
+    ])
 
     return NextResponse.json({ id: data.id }, { status: 201 })
   } catch (error) {
