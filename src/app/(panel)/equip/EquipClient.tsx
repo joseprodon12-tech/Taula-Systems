@@ -979,25 +979,21 @@ export default function EquipClient({
               </>
             )}
 
-            {/* Eliminar torns — desktop (xl+): context from vista/diaGantt */}
-            <button
-              className="btn btn-ghost btn-sm hidden xl:inline-flex"
-              style={{ color: 'var(--state-noshow)' }}
-              onClick={vista === 'setmana' ? handleDeleteWeek : () => handleDeleteDay(diaGantt)}
-              disabled={isPending}
-            >
-              {vista === 'setmana' ? t('equip.eliminarSetmana') : t('equip.eliminarDia')}
-            </button>
-
-            {/* Eliminar torns — mòbil/iPad (<xl): context from mobileDay */}
-            <button
-              className="btn btn-ghost btn-sm xl:hidden"
-              style={{ color: 'var(--state-noshow)' }}
-              onClick={mobileDay !== 'tot' ? () => handleDeleteDay(mobileDay) : handleDeleteWeek}
-              disabled={isPending}
-            >
-              {mobileDay !== 'tot' ? t('equip.eliminarDia') : t('equip.eliminarSetmana')}
-            </button>
+            {/* Eliminar torns — un sol botó, context de la vista activa */}
+            {(() => {
+              const inDay = vista === 'dia' || mobileDay !== 'tot'
+              const target = mobileDay !== 'tot' ? mobileDay : diaGantt
+              return (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ color: 'var(--state-noshow)' }}
+                  onClick={inDay ? () => handleDeleteDay(target) : handleDeleteWeek}
+                  disabled={isPending}
+                >
+                  {inDay ? t('equip.eliminarDia') : t('equip.eliminarSetmana')}
+                </button>
+              )
+            })()}
           </>
         )}
       </div>
