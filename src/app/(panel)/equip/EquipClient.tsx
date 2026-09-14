@@ -533,7 +533,7 @@ export default function EquipClient({
 
   const multiGroup = groups.length > 1
 
-  function DesktopGrid() {
+  function renderDesktopGrid() {
     // Punt 7: cap empleat → fila fantasma clicable en lloc de la graella buida
     if (employees.length === 0) {
       return (
@@ -705,7 +705,7 @@ export default function EquipClient({
 
   // ── Mobile day view ─────────────────────────────────────────────────────────
 
-  function MobileView() {
+  function renderMobileView() {
     const chipRow = (
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, marginBottom: 12 }}>
         {/* Tot button */}
@@ -1001,7 +1001,7 @@ export default function EquipClient({
       {/* ── Desktop view (grid or gantt) ── */}
       <div className="hidden xl:block">
         {vista === 'setmana'
-          ? <DesktopGrid />
+          ? renderDesktopGrid()
           : <EmployeeDayGantt
               date={diaGantt}
               today={today}
@@ -1018,7 +1018,7 @@ export default function EquipClient({
 
       {/* ── Mobile + tablet view ── */}
       <div className="xl:hidden">
-        <MobileView />
+        {renderMobileView()}
       </div>
 
       {/* ── Editor ── */}

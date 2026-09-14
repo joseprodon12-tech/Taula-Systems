@@ -147,7 +147,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           return
         }
         if (result.warning) show(result.warning, 'error')
-        router.push('/agenda')
+        router.push(`/agenda?data=${data.date}`)
       }
     })
   }
