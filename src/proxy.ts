@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -31,7 +31,9 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/r/') ||
     request.nextUrl.pathname.startsWith('/auth/') ||
-    request.nextUrl.pathname.startsWith('/api/widget/')
+    request.nextUrl.pathname.startsWith('/api/widget/') ||
+    // El cron de Vercel no porta sessió: s'autentica amb CRON_SECRET a la ruta
+    request.nextUrl.pathname.startsWith('/api/cron/')
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
