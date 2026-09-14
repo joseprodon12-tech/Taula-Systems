@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CalendarDays, Users, Plus } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Cell, LabelList, ResponsiveContainer } from 'recharts'
 import DatePicker from '@/components/DatePicker'
 import EmpAvatar from '@/components/ui/EmpAvatar'
@@ -11,10 +11,10 @@ import { useT } from '@/context/LocaleContext'
 import { addDays } from '@/lib/dates'
 import type { Reservation, ShiftWithEmployee } from '@/db/schema'
 
-// SVG fill no suporta CSS variables; hex literals del tema amber
-const CHART_CURRENT = '#D97706'
-const CHART_PAST    = '#D1D5DB'
-const CHART_FUTURE  = '#FCD34D'
+// SVG fill no suporta CSS variables; hex literals del tema terracota
+const CHART_CURRENT = '#A3442D'
+const CHART_PAST    = '#CDD2CE'
+const CHART_FUTURE  = '#D9A490'
 
 export type AvisoData =
   | { key: 'senseHoraris'; nextMonday: string }
@@ -118,24 +118,24 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
   const totalEmps = empEntries.length
 
   return (
-    <div>
+    <div className="today-page">
       {/* ── Capçalera ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div className="today-header">
+        <div className="today-heading">
+          <h1>{t('nav.avui')}</h1>
+          <p className="today-date">{formatDateHeader(selectedDate).split(' — ').at(-1)}</p>
+        </div>
+        <div className="today-controls">
         <button
           onClick={() => router.push(`/avui?data=${addDays(selectedDate, -1)}`)}
-          className="p-1.5 rounded-lg hover:bg-white transition-colors"
-          style={{ color: 'var(--text-muted)' }}
+          className="today-date-button"
           title={t('avui.anteriorDia')}
         >
           <ChevronLeft size={22} />
         </button>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>
-          {formatDateHeader(selectedDate)}
-        </h1>
         <button
           onClick={() => router.push(`/avui?data=${addDays(selectedDate, 1)}`)}
-          className="p-1.5 rounded-lg hover:bg-white transition-colors"
-          style={{ color: 'var(--text-muted)' }}
+          className="today-date-button"
           title={t('avui.seguent')}
         >
           <ChevronRight size={22} />
@@ -146,25 +146,24 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
           </button>
         )}
         <button
-          className="btn btn-ghost btn-sm md:hidden"
-          style={{ padding: '6px 8px', marginLeft: 'auto' }}
+          className="today-date-button md:hidden"
+          aria-label={t('reserva.camps.data')}
           onClick={() => setShowCalendar(true)}
         >
           <CalendarDays size={16} />
         </button>
+        </div>
       </div>
 
       {/* ── ZONA 2: Dues columnes ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 20 }}>
+      <div className="today-grid">
 
         {/* Columna esquerra: gràfic + properes reserves */}
-        <div className="card" style={{ padding: 20 }}>
-          <p style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
-            <span style={{ color: 'var(--primary)' }}>{active.length}</span>
-            {' '}{active.length === 1 ? t('avui.reserva') : t('avui.reserves')}
-            {' · '}
-            <span style={{ color: 'var(--primary)' }}>{totalPax}</span>
-            {' '}{t('avui.persones')}
+        <div className="card today-summary">
+          <h2 className="today-section-label"><CalendarDays size={18} /><span>{t('avui.reserves')}</span></h2>
+          <p className="today-total">
+            <strong>{active.length}</strong>
+            <span>{active.length === 1 ? t('avui.reserva') : t('avui.reserves')} · {totalPax} {t('avui.persones')}</span>
           </p>
           {active.length > 0 && (
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
@@ -178,14 +177,14 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
             <div style={{ height: 120, marginBottom: 16 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={hourlyData} margin={{ top: 16, right: 4, left: -28, bottom: 0 }}>
-                  <XAxis dataKey="hour" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="hour" tick={{ fontSize: 11, fill: '#626969' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Bar dataKey="pax" radius={[4, 4, 0, 0]}>
                     <LabelList
                       dataKey="reservations"
                       position="top"
                       formatter={(v) => `${v}${t('avui.resAbrev')}`}
-                      style={{ fontSize: 10, fill: '#9CA3AF' }}
+                      style={{ fontSize: 10, fill: '#626969' }}
                     />
                     {hourlyData.map(entry => {
                       const h = parseInt(entry.hour)
@@ -197,9 +196,9 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
               </ResponsiveContainer>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '24px 0', marginBottom: 8 }}>
+            <div className="today-empty">
               <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>Cap reserva per aquest dia.</p>
-              <a href={`/reserva/nova?data=${selectedDate}`} className="btn btn-primary btn-sm">+ Nova reserva</a>
+              <a href={`/reserva/nova?data=${selectedDate}`} className="btn btn-primary"><Plus size={16} />{t('reserva.nova')}</a>
             </div>
           )}
 
@@ -225,7 +224,7 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
             </div>
           )}
 
-          <div style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+          <div className="today-footer">
             <a href={`/agenda?data=${selectedDate}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
               {t('avui.agendaCompleta')}
             </a>
@@ -233,18 +232,19 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
         </div>
 
         {/* Columna dreta: equip d'avui */}
-        <div className="card" style={{ padding: 20 }}>
-          <p style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>
-            <span style={{ color: 'var(--primary)' }}>{totalEmps}</span>
-            {' '}{totalEmps === 1 ? t('avui.equip.titular1') : t('avui.equip.titular')}
+        <div className="card today-summary">
+          <h2 className="today-section-label"><Users size={18} /><span>{t('nav.equip')}</span></h2>
+          <p className="today-total">
+            <strong>{totalEmps}</strong>
+            <span>{totalEmps === 1 ? t('avui.equip.titular1') : t('avui.equip.titular')}</span>
           </p>
 
           {empEntries.length === 0 ? (
-            <div>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+            <div className="today-team-empty">
+              <p>
                 {t('avui.equip.senseTorns')}
               </p>
-              <a href="/equip" style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
+              <a href="/equip">
                 {t('avui.equip.anarEquip')}
               </a>
             </div>
@@ -282,21 +282,21 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
       </div>
 
       {/* ── ZONA 3: Notificacions (toggle) ── */}
-      <div className="card" style={{ padding: 0, marginBottom: 20, overflow: 'hidden' }}>
+      <div className="card today-notifications">
         <button
-          className="btn btn-ghost btn-sm"
-          style={{ width: '100%', justifyContent: 'space-between', padding: '10px 16px', borderRadius: 0, fontSize: 13, color: 'var(--text-muted)' }}
+          className="today-notification-toggle"
+          aria-expanded={showNotif}
           onClick={() => setShowNotif(v => !v)}
         >
           <span style={{ fontWeight: 600 }}>
             {t('avui.notificacions.titol')}
             {avisos.length > 0 && (
-              <span style={{ marginLeft: 6, background: '#F59E0B', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>
+              <span className="today-notification-count">
                 {avisos.length}
               </span>
             )}
           </span>
-          <span>{showNotif ? '▲' : '▼'}</span>
+          <span aria-hidden="true">{showNotif ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</span>
         </button>
         {showNotif && (
           <div style={{ borderTop: '1px solid var(--border)' }}>
@@ -309,13 +309,7 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
                 {avisos.map((aviso, i) => (
                   <div
                     key={i}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      flexWrap: 'wrap', gap: 8, padding: '10px 16px',
-                      borderBottom: i < avisos.length - 1 ? '1px solid var(--border)' : undefined,
-                      borderLeft: '3px solid #F59E0B',
-                      background: '#FFFBEB',
-                    }}
+                    className="today-notification-row"
                   >
                     {aviso.key === 'senseHoraris' && (
                       <>

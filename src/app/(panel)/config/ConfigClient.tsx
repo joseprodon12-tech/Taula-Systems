@@ -12,33 +12,33 @@ import { createTable, updateTable, deleteTable } from '@/app/actions/tables'
 import type { Restaurant, Closure, Table, WeeklyHours, DayHours } from '@/db/schema'
 import { useT } from '@/context/LocaleContext'
 
-// ── iOS-style layout constants ──
+// Shared presentation for settings sections.
 const sTitle: CSSProperties = {
-  fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
-  textTransform: 'uppercase', color: 'var(--text-muted)',
-  padding: '0 4px 5px', marginTop: 28,
+  fontSize: 17, fontWeight: 600, color: 'var(--text)',
+  marginBottom: 12,
 }
 const card: CSSProperties = {
-  background: '#fff', borderRadius: 12,
+  background: 'var(--bg)', borderRadius: 14,
   border: '1px solid var(--border)',
 }
 const row: CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  padding: '12px 16px', minHeight: 48,
+  padding: '16px', minHeight: 56, gap: 12,
 }
 const divider: CSSProperties = { height: 1, background: 'var(--border)', margin: '0 16px' }
-const lbl: CSSProperties = { fontSize: 15, color: 'var(--text)', flexShrink: 0 }
+const lbl: CSSProperties = { fontSize: 14, color: 'var(--text)', minWidth: 0 }
 const inputRight: CSSProperties = {
-  border: 'none', background: 'transparent', outline: 'none',
-  textAlign: 'right', color: 'var(--text)', fontSize: 15, width: '55%',
+  border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)',
+  padding: '10px 12px', minHeight: 44, minWidth: 0,
+  textAlign: 'left', color: 'var(--text)', fontSize: 16, width: '55%',
 }
 const stepBtn: CSSProperties = {
-  width: 30, height: 30, borderRadius: 15, border: '1px solid var(--border)',
+  width: 44, height: 44, borderRadius: 9, border: '1px solid var(--border)',
   background: 'var(--surface)', cursor: 'pointer', fontSize: 18, lineHeight: '1',
   color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center',
   flexShrink: 0,
 }
-const iconBtn: CSSProperties = { padding: 4, background: 'none', border: 'none', cursor: 'pointer' }
+const iconBtn: CSSProperties = { width: 44, height: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderRadius: 8, background: 'none', border: 'none', cursor: 'pointer' }
 
 interface Props {
   restaurant: Restaurant
@@ -250,21 +250,75 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
   , [locale])
 
   return (
-    <div style={{ background: '#F2F2F7', margin: '-24px -16px -32px', padding: '24px 16px 48px', minHeight: '100vh' }}>
-      <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{t('config.titol')}</h1>
+    <div className="config-page">
+      <header className="config-header"><h1>{t('config.titol')}</h1></header>
 
-      {/* IDIOMA */}
-      <p style={sTitle}>{t('config.idioma')}</p>
+        <div className="config-sections config-sections-restaurant">
+          <section className="config-section">
+{/* RESTAURANT */}
+      <h2 style={sTitle}>{t('config.seccions.restaurant')}</h2>
+      <div className="config-info-card" style={card}>
+        {([
+          { field: 'name'    as const, label: t('config.info.nom'),     placeholder: 'Can Jordi',           type: 'text'  },
+          { field: 'phone'   as const, label: t('config.info.telefon'), placeholder: '93 000 00 00',        type: 'tel'   },
+          { field: 'email'   as const, label: 'Email',                  placeholder: 'hola@restaurant.com', type: 'email' },
+          { field: 'address' as const, label: t('config.info.adreca'),  placeholder: 'Carrer Major, 1',     type: 'text'  },
+        ]).map(({ field, label, placeholder, type }, idx) => (
+          <div key={field}>
+            {idx > 0 && <div style={divider} />}
+            <div className="config-row" style={row}>
+              <label htmlFor={`config-info-${field}`} style={lbl}>{label}</label>
+              <input
+                id={`config-info-${field}`}
+                type={type}
+                value={info[field]}
+                placeholder={placeholder}
+                onChange={e => handleInfoChange(field, e.target.value)}
+                style={inputRight}
+              />
+            </div>
+          </div>
+        ))}
+        <div style={divider} />
+        <div className="config-url" style={{ ...row, gap: 8 }}>
+          <label htmlFor="config-slug" style={lbl}>{t('config.info.url')}</label>
+          <div className="config-url-input">
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginRight: 2 }}>taula.systems/r/</span>
+            <input
+              id="config-slug"
+              value={info.slug}
+              placeholder="can-jordi"
+              onChange={e => handleInfoChange('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+              style={{ ...inputRight, width: 100 }}
+            />
+          </div>
+        </div>
+        {infoChanged && (
+          <>
+            <div style={divider} />
+            <div className="config-save" style={{ padding: '12px 16px' }}>
+              <button className="btn btn-primary" style={{ width: '100%' }} onClick={saveInfo} disabled={isPending}>
+                Guardar informació
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+</section>
+<section className="config-section">
+{/* IDIOMA */}
+      <h2 style={sTitle}>{t('config.idioma')}</h2>
       <div style={card}>
-        <div style={row}>
+        <div className="config-row" style={row}>
           <span style={lbl}>{t('config.idioma')}</span>
           <div style={{ display: 'flex', gap: 4 }}>
             {(['ca', 'es'] as const).map(lang => (
               <button
                 key={lang}
                 onClick={() => changeLocale(lang)}
+                aria-pressed={locale === lang}
                 style={{
-                  padding: '6px 16px', borderRadius: 8, fontSize: 14, fontWeight: 500,
+                  padding: '6px 16px', minHeight: 44, borderRadius: 8, fontSize: 14, fontWeight: 500,
                   background: locale === lang ? 'var(--primary)' : 'var(--surface)',
                   color: locale === lang ? '#fff' : 'var(--text)',
                   border: '1px solid var(--border)', cursor: 'pointer',
@@ -276,57 +330,13 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
           </div>
         </div>
       </div>
-
-      {/* RESTAURANT */}
-      <p style={sTitle}>{t('config.seccions.restaurant')}</p>
-      <div style={card}>
-        {([
-          { field: 'name'    as const, label: t('config.info.nom'),     placeholder: 'Can Jordi',           type: 'text'  },
-          { field: 'phone'   as const, label: t('config.info.telefon'), placeholder: '93 000 00 00',        type: 'tel'   },
-          { field: 'email'   as const, label: 'Email',                  placeholder: 'hola@restaurant.com', type: 'email' },
-          { field: 'address' as const, label: t('config.info.adreca'),  placeholder: 'Carrer Major, 1',     type: 'text'  },
-        ]).map(({ field, label, placeholder, type }, idx) => (
-          <div key={field}>
-            {idx > 0 && <div style={divider} />}
-            <div style={row}>
-              <span style={lbl}>{label}</span>
-              <input
-                type={type}
-                value={info[field]}
-                placeholder={placeholder}
-                onChange={e => handleInfoChange(field, e.target.value)}
-                style={inputRight}
-              />
-            </div>
-          </div>
-        ))}
-        <div style={divider} />
-        <div style={{ ...row, gap: 8 }}>
-          <span style={{ ...lbl }}>{t('config.info.url')}</span>
-          <div style={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginRight: 2 }}>taula.systems/r/</span>
-            <input
-              value={info.slug}
-              placeholder="can-jordi"
-              onChange={e => handleInfoChange('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
-              style={{ ...inputRight, width: 100 }}
-            />
-          </div>
+</section>
         </div>
-        {infoChanged && (
-          <>
-            <div style={divider} />
-            <div style={{ padding: '12px 16px' }}>
-              <button className="btn btn-primary" style={{ width: '100%' }} onClick={saveInfo} disabled={isPending}>
-                Guardar informació
-              </button>
-            </div>
-          </>
-        )}
-      </div>
 
-      {/* HORARIS */}
-      <p style={sTitle}>{t('config.seccions.horaris')}</p>
+        <div className="config-sections config-sections-horaris">
+          <section className="config-section">
+{/* HORARIS */}
+      <h2 style={sTitle}>{t('config.seccions.horaris')}</h2>
       <div style={card}>
         {DAYS.map(({ key, label }, idx) => {
           const day: DayHours = hours[key] || {}
@@ -335,10 +345,10 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
           return (
             <div key={key}>
               {idx > 0 && <div style={divider} />}
-              <div style={{ ...row, cursor: 'pointer' }} onClick={() => setExpandedDay(isExpanded ? null : key)}>
+              <button type="button" className="config-day-toggle" style={{ ...row, cursor: 'pointer' }} aria-expanded={isExpanded} onClick={() => setExpandedDay(isExpanded ? null : key)}>
                 <span style={lbl}>{label}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 13, color: isClosed ? 'var(--text-muted)' : 'var(--block-arrived)' }}>
+                  <span style={{ fontSize: 13, color: isClosed ? 'var(--text-muted)' : 'var(--state-arrived)' }}>
                     {isClosed ? t('config.horaris.tancat') : t('config.horaris.obert')}
                   </span>
                   {isExpanded
@@ -346,15 +356,15 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
                     : <ChevronRight size={15} color="var(--text-muted)" />
                   }
                 </div>
-              </div>
+              </button>
               {isExpanded && (
-                <div style={{ padding: '12px 16px', background: '#F8FAFC', borderTop: '1px solid var(--border)' }}>
+                <div className="config-hours-details" style={{ padding: '16px', background: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={!isClosed}
                       onChange={e => toggleClosed(key, !e.target.checked)}
-                      style={{ accentColor: 'var(--primary)', width: 16, height: 16 }}
+                      style={{ accentColor: 'var(--primary)', width: 20, height: 20 }}
                     />
                     <span style={{ fontSize: 14, color: 'var(--text)' }}>{t('config.horaris.obertDia')}</span>
                   </label>
@@ -386,7 +396,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         {hoursChanged && (
           <>
             <div style={{ height: 1, background: 'var(--border)' }} />
-            <div style={{ padding: '12px 16px' }}>
+            <div className="config-save" style={{ padding: '12px 16px' }}>
               <button className="btn btn-primary" style={{ width: '100%' }} onClick={saveHours} disabled={isPending}>
                 Guardar horari
               </button>
@@ -394,26 +404,27 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
           </>
         )}
       </div>
-
-      {/* DIES TANCATS */}
-      <p style={sTitle}>{t('config.seccions.tancats')}</p>
+</section>
+<section className="config-section">
+{/* DIES TANCATS */}
+      <h2 style={sTitle}>{t('config.seccions.tancats')}</h2>
       <div style={card}>
         {closureList.map((c, idx) => (
           <div key={c.id}>
             {idx > 0 && <div style={divider} />}
-            <div style={row}>
+            <div className="config-row" style={row}>
               <div>
                 <span style={{ fontSize: 15, color: 'var(--text)' }}>{formatDate(c.date, locale)}</span>
                 {c.reason && <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 8 }}>{c.reason}</span>}
               </div>
-              <button type="button" onClick={() => handleRemoveClosure(c.id)} disabled={isPending} style={{ ...iconBtn, color: '#EF4444' }}>
+              <button type="button" onClick={() => handleRemoveClosure(c.id)} aria-label={`${t('config.taules.eliminar')} ${formatDate(c.date, locale)}`} disabled={isPending} style={{ ...iconBtn, color: '#EF4444' }}>
                 <Trash2 size={14} />
               </button>
             </div>
           </div>
         ))}
         {closureList.length > 0 && <div style={{ height: 1, background: 'var(--border)' }} />}
-        <div style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
+        <div className="config-closure-form">
           <DatePicker
             value={newDate}
             onChange={setNewDate}
@@ -422,19 +433,59 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
           />
           <input
             className="input"
+            aria-label={t('config.tancats.motiu')}
             placeholder={t('config.tancats.motiu')}
             value={newReason}
             onChange={e => setNewReason(e.target.value)}
             style={{ flex: 2 }}
           />
-          <button className="btn btn-secondary" onClick={handleAddClosure} disabled={!newDate || isPending}>
+          <button className="btn btn-secondary" aria-label={t('config.organitzacio.afegirTancat')} onClick={handleAddClosure} disabled={!newDate || isPending}>
             <Plus size={15} />
           </button>
         </div>
       </div>
+</section>
+        </div>
 
-      {/* TAULES */}
-      <p style={sTitle}>{t('config.taules.titol')}</p>
+        <div className="config-sections config-sections-taules">
+          <section className="config-section">
+{/* CAPACITAT */}
+      <h2 style={sTitle}>{t('config.seccions.capacitat')}</h2>
+      <div style={card}>
+        <div className="config-row" style={row}>
+          <label htmlFor="config-indoor" style={lbl}>{t('config.taules.sala')}</label>
+          <input id="config-indoor"
+            type="number" min={0} max={999}
+            value={capacity.indoor}
+            onChange={e => { setCapacity(p => ({ ...p, indoor: +e.target.value })); setCapChanged(true) }}
+            style={{ ...inputRight, width: 84 }}
+          />
+        </div>
+        <div style={divider} />
+        <div className="config-row" style={row}>
+          <label htmlFor="config-outdoor" style={lbl}>{t('config.taules.terrassa')}</label>
+          <input id="config-outdoor"
+            type="number" min={0} max={999}
+            value={capacity.outdoor}
+            onChange={e => { setCapacity(p => ({ ...p, outdoor: +e.target.value })); setCapChanged(true) }}
+            style={{ ...inputRight, width: 84 }}
+          />
+        </div>
+        {capChanged && (
+          <>
+            <div style={divider} />
+            <div className="config-save" style={{ padding: '12px 16px' }}>
+              <button className="btn btn-primary" style={{ width: '100%' }} onClick={saveCapacityData} disabled={isPending}>
+                Guardar capacitat
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+</section>
+<section className="config-section">
+{/* TAULES */}
+      <h2 style={sTitle}>{t('config.taules.titol')}</h2>
       <div style={card}>
         <TableGroup
           title={t('config.taules.sala')}
@@ -460,45 +511,15 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
           </>
         )}
       </div>
-
-      {/* CAPACITAT */}
-      <p style={sTitle}>{t('config.seccions.capacitat')}</p>
-      <div style={card}>
-        <div style={row}>
-          <span style={lbl}>{t('config.taules.sala')}</span>
-          <input
-            type="number" min={0} max={999}
-            value={capacity.indoor}
-            onChange={e => { setCapacity(p => ({ ...p, indoor: +e.target.value })); setCapChanged(true) }}
-            style={{ ...inputRight, width: 60 }}
-          />
+</section>
         </div>
-        <div style={divider} />
-        <div style={row}>
-          <span style={lbl}>{t('config.taules.terrassa')}</span>
-          <input
-            type="number" min={0} max={999}
-            value={capacity.outdoor}
-            onChange={e => { setCapacity(p => ({ ...p, outdoor: +e.target.value })); setCapChanged(true) }}
-            style={{ ...inputRight, width: 60 }}
-          />
-        </div>
-        {capChanged && (
-          <>
-            <div style={divider} />
-            <div style={{ padding: '12px 16px' }}>
-              <button className="btn btn-primary" style={{ width: '100%' }} onClick={saveCapacityData} disabled={isPending}>
-                Guardar capacitat
-              </button>
-            </div>
-          </>
-        )}
-      </div>
 
-      {/* DURADES */}
-      <p style={sTitle}>{t('config.durades.titol')}</p>
+        <div className="config-sections config-sections-reserves">
+          <section className="config-section">
+{/* DURADES */}
+      <h2 style={sTitle}>{t('config.durades.titol')}</h2>
       <div style={card}>
-        <div style={row}>
+        <div className="config-row" style={row}>
           <span style={lbl}>{t('config.durades.dinar')}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button type="button" style={stepBtn} onClick={() => adjustDuration('lunch', -15)}>−</button>
@@ -509,7 +530,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
           </div>
         </div>
         <div style={divider} />
-        <div style={row}>
+        <div className="config-row" style={row}>
           <span style={lbl}>{t('config.durades.sopar')}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button type="button" style={stepBtn} onClick={() => adjustDuration('dinner', -15)}>−</button>
@@ -522,7 +543,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         {durationsChanged && (
           <>
             <div style={divider} />
-            <div style={{ padding: '12px 16px' }}>
+            <div className="config-save" style={{ padding: '12px 16px' }}>
               <button className="btn btn-primary" style={{ width: '100%' }} onClick={saveDurationData} disabled={isPending}>
                 Guardar durades
               </button>
@@ -530,16 +551,17 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
           </>
         )}
       </div>
-
-      {/* NOTIFICACIONS */}
-      <p style={sTitle}>{t('config.notificacions.titol')}</p>
+</section>
+<section className="config-section">
+{/* NOTIFICACIONS */}
+      <h2 style={sTitle}>{t('config.notificacions.titol')}</h2>
       <div style={card}>
-        <div style={row}>
-          <span style={lbl}>{t('config.notificacions.canal')}</span>
-          <select
+        <div className="config-row" style={row}>
+          <label htmlFor="config-channel" style={lbl}>{t('config.notificacions.canal')}</label>
+          <select id="config-channel" className="config-channel"
             value={notif.notification_channel}
             onChange={e => handleNotifChange('notification_channel', e.target.value)}
-            style={{ border: 'none', background: 'transparent', outline: 'none', color: 'var(--text)', fontSize: 15, textAlign: 'right' }}
+            style={inputRight}
           >
             <option value="whatsapp">{t('config.notificacions.whatsapp')}</option>
             <option value="email">{t('config.notificacions.email')}</option>
@@ -549,9 +571,9 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         {notif.notification_channel === 'email' && (
           <>
             <div style={divider} />
-            <div style={row}>
-              <span style={lbl}>{t('config.notificacions.remitent')}</span>
-              <input
+            <div className="config-row" style={row}>
+              <label htmlFor="config-sender" style={lbl}>{t('config.notificacions.remitent')}</label>
+              <input id="config-sender"
                 type="email"
                 value={notif.notification_email_from}
                 onChange={e => handleNotifChange('notification_email_from', e.target.value)}
@@ -564,7 +586,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         {notifChanged && (
           <>
             <div style={divider} />
-            <div style={{ padding: '12px 16px' }}>
+            <div className="config-save" style={{ padding: '12px 16px' }}>
               <button className="btn btn-primary" style={{ width: '100%' }} onClick={saveNotif} disabled={isPending}>
                 {t('config.notificacions.guardar')}
               </button>
@@ -572,14 +594,15 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
           </>
         )}
       </div>
-
-      {toast && <Toast message={toast.message} type={toast.type} onClose={hide} />}
+</section>
+        </div>
+      {toast &&<Toast message={toast.message} type={toast.type} onClose={hide} />}
 
       {/* ── Bottom sheet: Confirmar eliminació de taula ── */}
       {deleteTableId && (
         <>
           <div onClick={() => setDeleteTableId(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 40 }} />
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: 'var(--bg)', borderRadius: '16px 16px 0 0', padding: '24px 20px 32px', boxShadow: '0 -4px 24px rgba(0,0,0,0.12)' }}>
+          <div className="config-sheet" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: 'var(--bg)', borderRadius: '16px 16px 0 0', padding: '24px 20px 32px', boxShadow: '0 -4px 24px rgba(0,0,0,0.12)' }}>
             <p className="font-bold mb-2" style={{ color: 'var(--text)', fontSize: 17 }}>{t('config.taules.eliminar')}</p>
             <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>
               {t('config.taules.eliminarConfirm')}
@@ -596,7 +619,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
       {tableSheet && (
         <>
           <div onClick={() => setTableSheet(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 40 }} />
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: 'var(--bg)', borderRadius: '16px 16px 0 0', padding: '24px 20px 32px', boxShadow: '0 -4px 24px rgba(0,0,0,0.12)' }}>
+          <div className="config-sheet" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: 'var(--bg)', borderRadius: '16px 16px 0 0', padding: '24px 20px 32px', boxShadow: '0 -4px 24px rgba(0,0,0,0.12)' }}>
             <p className="font-bold mb-4" style={{ color: 'var(--text)', fontSize: 17 }}>
               {tableSheet.mode === 'add' ? t('config.taules.afegir') : t('config.taules.editar')}
             </p>
@@ -611,12 +634,13 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
                   autoFocus
                 />
               </label>
-              <label style={{ display: 'block' }}>
+              <div role="group" aria-label={t('config.taules.seccioLabel')} style={{ display: 'block' }}>
                 <span className="label">{t('config.taules.seccioLabel')}</span>
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   {(['indoor', 'outdoor'] as const).map(s => (
                     <button
                       key={s} type="button"
+                      aria-pressed={tableForm.section === s}
                       className={`btn btn-sm ${tableForm.section === s ? 'btn-primary' : 'btn-ghost'}`}
                       onClick={() => setTableForm(f => ({ ...f, section: s }))}
                     >
@@ -624,8 +648,8 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
                     </button>
                   ))}
                 </div>
-              </label>
-              <label style={{ display: 'block' }}>
+              </div>
+              <div role="group" aria-label={t('config.taules.capacitatLabel')} style={{ display: 'block' }}>
                 <span className="label">{t('config.taules.capacitatLabel')}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
                   <button type="button" className="btn btn-ghost btn-sm" style={{ minWidth: 44, minHeight: 44 }} onClick={() => setTableForm(f => ({ ...f, capacity: Math.max(1, f.capacity - 1) }))}>−</button>
@@ -633,7 +657,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
                   <button type="button" className="btn btn-ghost btn-sm" style={{ minWidth: 44, minHeight: 44 }} onClick={() => setTableForm(f => ({ ...f, capacity: Math.min(20, f.capacity + 1) }))}>+</button>
                   <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('config.taules.places')}</span>
                 </div>
-              </label>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
               <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setTableSheet(null)}>Cancel·lar</button>
@@ -659,30 +683,33 @@ function TableGroup({ title, tables, onEdit, onDelete, onAdd, isPending, placesL
   isPending: boolean
   placesLabel: string
 }) {
+  const { t } = useT()
   return (
-    <div>
-      <div style={{ padding: '8px 16px 2px' }}>
+    <div className="config-table-group">
+      <div style={{ padding: '16px 16px 12px' }}>
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
           {title}
         </span>
       </div>
+      <div className="config-table-items">
       {tables.map(tbl => (
-        <div key={tbl.id}>
+        <div key={tbl.id} className="config-table-item">
           <div style={{ height: 1, background: 'var(--border)', margin: '0 16px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', minHeight: 48 }}>
-            <span style={{ fontSize: 15, color: 'var(--text)' }}>{tbl.number}</span>
+            <span className="config-table-number">{tbl.number}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{tbl.capacity} {placesLabel}</span>
-              <button type="button" onClick={() => onEdit(tbl)} disabled={isPending} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <button type="button" onClick={() => onEdit(tbl)} aria-label={`${t('config.taules.editar')} ${tbl.number}`} disabled={isPending} style={{ ...iconBtn, color: 'var(--text-muted)' }}>
                 <Pencil size={14} />
               </button>
-              <button type="button" onClick={() => onDelete(tbl.id)} disabled={isPending} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444' }}>
+              <button type="button" onClick={() => onDelete(tbl.id)} aria-label={`${t('config.taules.eliminar')} ${tbl.number}`} disabled={isPending} style={{ ...iconBtn, color: 'var(--state-noshow)' }}>
                 <Trash2 size={14} />
               </button>
             </div>
           </div>
         </div>
       ))}
+      </div>
       <div style={{ height: 1, background: 'var(--border)', margin: '0 16px' }} />
       <button
         type="button"
@@ -704,8 +731,9 @@ function ShiftRow({ label, fins, value, enabled, onToggle, onChange }: {
   onToggle: (enabled: boolean) => void
   onChange: (v: [string, string]) => void
 }) {
+  const { locale } = useT()
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="config-shift-row">
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
         <input
           type="checkbox"
@@ -721,14 +749,16 @@ function ShiftRow({ label, fins, value, enabled, onToggle, onChange }: {
             className="input" type="time"
             value={value?.[0] ?? '13:00'}
             onChange={e => onChange([e.target.value, value?.[1] ?? '16:00'])}
-            style={{ minHeight: 40, padding: '0 8px', fontSize: 13, flex: 1 }}
+            aria-label={`${label} ${locale === 'es' ? 'Inicio' : 'Inici'}`}
+            style={{ minHeight: 44, padding: '0 8px', fontSize: 16, minWidth: 0 }}
           />
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{fins}</span>
           <input
             className="input" type="time"
             value={value?.[1] ?? '16:00'}
             onChange={e => onChange([value?.[0] ?? '13:00', e.target.value])}
-            style={{ minHeight: 40, padding: '0 8px', fontSize: 13, flex: 1 }}
+            aria-label={`${label} ${locale === 'es' ? 'Fin' : 'Fi'}`}
+            style={{ minHeight: 44, padding: '0 8px', fontSize: 16, minWidth: 0 }}
           />
         </>
       )}

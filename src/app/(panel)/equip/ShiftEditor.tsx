@@ -46,7 +46,7 @@ export default function ShiftEditor({
   mode, employeeId, date, shift, employees, roleLabels, weeklyHours,
   fieldErrors, isPending, onSave, onDelete, onAddTram, onClose, isMobile,
 }: Props) {
-  const { t } = useT()
+  const { t, locale } = useT()
   const defaults = defaultTimes(date, weeklyHours)
 
   const [empId, setEmpId] = useState(shift?.employee_id ?? employeeId)
@@ -90,7 +90,7 @@ export default function ShiftEditor({
       }
     : {
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-        zIndex: 60, width: 360,
+        zIndex: 60, width: 440,
         background: 'var(--bg)', border: '1px solid var(--border)',
         borderRadius: 12, padding: 20,
         boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
@@ -105,18 +105,18 @@ export default function ShiftEditor({
         onClick={onClose}
       />
 
-      <div style={panelStyle} onClick={e => e.stopPropagation()}>
+      <div className="team-shift-editor" style={panelStyle} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--text)' }}>
             {mode === 'new' ? t('equip.torn.nou') : t('equip.torn.editar')}
           </span>
-          <button onClick={onClose} className="btn btn-ghost btn-sm" style={{ padding: '0 8px', minHeight: 32 }}>
+          <button onClick={onClose} aria-label={locale === 'ca' ? 'Tancar' : 'Cerrar'} className="btn btn-ghost btn-sm" style={{ padding: '0 8px', minHeight: 44 }}>
             <X size={16} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {/* Employee selector (only for new shifts — in existing shifts it's already assigned) */}
           {mode === 'new' && (
             <div>
@@ -144,7 +144,7 @@ export default function ShiftEditor({
           )}
 
           {/* Times */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10 }}>
             <div>
               <label className="label">{t('equip.torn.inici')}</label>
               <input
@@ -188,7 +188,7 @@ export default function ShiftEditor({
                       else setStart(time)
                     }}
                     style={{
-                      padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                      padding: '8px 12px', minHeight: 44, borderRadius: 9, fontSize: 13, fontWeight: 600,
                       border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
                       background: isSelected ? 'var(--primary)' : 'transparent',
                       color: isSelected ? 'white' : 'var(--text-muted)',

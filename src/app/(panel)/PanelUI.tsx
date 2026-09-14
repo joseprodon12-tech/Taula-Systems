@@ -71,7 +71,8 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
     return (
       <Link
         href={href}
-        className="flex items-center rounded-lg text-sm font-medium transition-colors"
+        className="panel-nav-link flex items-center rounded-lg text-sm font-medium transition-colors"
+        aria-current={active ? 'page' : undefined}
         style={{
           gap: isExpanded ? 12 : 0,
           justifyContent: isExpanded ? 'flex-start' : 'center',
@@ -87,7 +88,7 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
   }
 
   return (
-    <div className="h-screen overflow-hidden">
+    <div className="taula-panel h-screen overflow-hidden">
 
       {/* Sidebar — desktop (lg+) */}
       <aside
@@ -102,7 +103,7 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
         >
           {isExpanded ? (
             <>
-              <span className="text-base font-bold" style={{ color: 'var(--primary)', whiteSpace: 'nowrap' }}>Taula Systems</span>
+              <span className="panel-brand" aria-label="Taula Systems">Taula<span>.</span></span>
               <button onClick={toggle} className="p-1 rounded-lg hover:bg-gray-100 transition-colors shrink-0" style={{ color: 'var(--text-muted)' }} title="Col·lapsa">
                 <ChevronLeft size={16} />
               </button>
@@ -133,14 +134,14 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
 
       {/* Main */}
       <div className={`flex flex-col h-screen overflow-hidden ${compact ? 'xl:ml-12' : 'xl:ml-56'}`} style={{ transition: 'margin-left 0.2s ease' }}>
-        <main className="flex-1 overflow-y-auto px-2 pt-4 md:px-6 md:pt-6 pb-20 xl:pb-6">{children}</main>
+        <main className="panel-content flex-1 overflow-y-auto">{children}</main>
 
         {/* Bottom nav — mobile + tablet, fixed so scroll never hides it */}
-        <nav className="flex xl:hidden border-t" style={{ background: 'var(--bg)', borderColor: 'var(--border)', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30 }}>
+        <nav className="panel-bottom-nav flex xl:hidden border-t" style={{ background: 'var(--bg)', borderColor: 'var(--border)', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30 }}>
           {navItems.map(({ href, icon: Icon, labelKey: tKey }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
-              <Link key={href} href={href} className="flex-1 flex flex-col items-center gap-1 py-2 text-xs font-medium transition-colors" style={{ color: active ? 'var(--primary)' : 'var(--text-muted)' }}>
+              <Link key={href} href={href} aria-current={active ? 'page' : undefined} className="panel-bottom-link flex-1 flex flex-col items-center gap-1 py-2 text-xs font-medium transition-colors" style={{ color: active ? 'var(--primary)' : 'var(--text-muted)' }}>
                 <Icon size={20} />{t(tKey)}
               </Link>
             )

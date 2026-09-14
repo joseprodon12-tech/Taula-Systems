@@ -97,18 +97,22 @@ export default function AgendaClient({
   }
 
   return (
-    <div className="flex gap-6">
+    <div className="agenda-page flex gap-6">
     <div className="flex-1 min-w-0">
       {/* ── Capçalera ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div className="agenda-header">
+        <div className="agenda-heading">
+          <h1>{t('nav.agenda')}</h1>
+          <p>{vista === 'setmana' ? weekRangeLabel : dayLabel}</p>
+        </div>
 
         {/* Commutador 3 modes */}
-        <div style={{ display: 'flex', gap: 2, background: 'var(--surface)', borderRadius: 8, padding: 2, border: '1px solid var(--border)' }}>
+        <div className="agenda-views">
           {(['gantt', 'llista', 'setmana'] as Vista[]).map(v => (
             <button
               key={v}
-              className={`btn btn-sm ${vista === v ? 'btn-primary' : 'btn-ghost'}`}
-              style={{ padding: '4px 12px', borderRadius: 6, fontSize: 13 }}
+              className="agenda-view"
+              aria-pressed={vista === v}
               onClick={() => switchVista(v)}
             >
               {t(VISTA_KEYS[v])}
@@ -118,21 +122,16 @@ export default function AgendaClient({
 
         {/* Navegació diària (Gantt + Llista) */}
         {vista !== 'setmana' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div className="agenda-date-controls">
             <button
-              className="btn btn-ghost btn-sm"
-              style={{ padding: '0 8px' }}
+              className="btn btn-ghost agenda-date-arrow"
               onClick={() => router.push(`/agenda?vista=${vista}&data=${addDays(selectedDate, -1)}`)}
               title={t('avui.anteriorDia')}
             >
               <ChevronLeft size={16} />
             </button>
-            <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--text)', whiteSpace: 'nowrap', padding: '0 4px' }}>
-              {dayLabel}
-            </span>
             <button
-              className="btn btn-ghost btn-sm"
-              style={{ padding: '0 8px' }}
+              className="btn btn-ghost agenda-date-arrow"
               onClick={() => router.push(`/agenda?vista=${vista}&data=${addDays(selectedDate, 1)}`)}
               title={t('avui.seguent')}
             >
@@ -151,21 +150,16 @@ export default function AgendaClient({
 
         {/* Navegació setmanal */}
         {vista === 'setmana' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div className="agenda-date-controls">
             <button
-              className="btn btn-ghost btn-sm"
-              style={{ padding: '0 8px' }}
+              className="btn btn-ghost agenda-date-arrow"
               onClick={() => router.push(`/agenda?vista=setmana&data=${addDays(selectedDate, -7)}`)}
               title={t('agenda.setmanaAnterior')}
             >
               <ChevronLeft size={16} />
             </button>
-            <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', whiteSpace: 'nowrap', padding: '0 4px' }}>
-              {weekRangeLabel}
-            </span>
             <button
-              className="btn btn-ghost btn-sm"
-              style={{ padding: '0 8px' }}
+              className="btn btn-ghost agenda-date-arrow"
               onClick={() => router.push(`/agenda?vista=setmana&data=${addDays(selectedDate, 7)}`)}
               title={t('agenda.setmanaSeguent')}
             >
@@ -184,8 +178,8 @@ export default function AgendaClient({
 
         {/* Botó calendari — només visible en mòbil */}
         <button
-          className="btn btn-ghost btn-sm md:hidden"
-          style={{ padding: '6px 8px', marginLeft: 'auto' }}
+          className="btn btn-ghost agenda-calendar-button xl:hidden"
+          aria-label={t('avui.calendari')}
           onClick={() => setShowCalendar(true)}
         >
           <CalendarDays size={16} />
@@ -223,7 +217,7 @@ export default function AgendaClient({
     </div>
 
     {/* ── Sidebar desktop ── */}
-    <aside className="hidden xl:block w-52 shrink-0">
+    <aside className="agenda-sidebar hidden xl:block w-52 shrink-0">
       <div className="card sticky top-0" style={{ maxHeight: 'calc(100vh - 48px)', overflowY: 'auto' }}>
         <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
           {t('avui.calendari')}
@@ -270,7 +264,7 @@ function ListaView({ reservations }: { reservations: Reservation[] }) {
 
   if (active.length === 0) {
     return (
-      <div style={{ padding: '32px 0', textAlign: 'center' }}>
+      <div className="agenda-empty">
         <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 12 }}>Cap reserva aquest dia.</p>
         <a href="/reserva/nova" className="btn btn-primary btn-sm">+ Nova reserva</a>
       </div>
@@ -286,7 +280,7 @@ function ListaView({ reservations }: { reservations: Reservation[] }) {
   const sopar = active.filter(r => getShift(r.time) === 'sopar')
 
   return (
-    <div className="space-y-6">
+    <div className="agenda-list space-y-6">
       {dinar.length > 0 && <Section title={t('avui.dinar')} reserves={dinar} />}
       {sopar.length > 0 && <Section title={t('avui.sopar')} reserves={sopar} />}
     </div>
@@ -303,8 +297,8 @@ function Section({ title, reserves }: { title: string; reserves: Reservation[] }
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-3">
-        <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text)' }}>
+      <div className="agenda-service-heading">
+        <span className="agenda-service-title">
           {title}
         </span>
         <div className="flex-1 border-t" style={{ borderColor: 'var(--border)' }} />
@@ -315,7 +309,7 @@ function Section({ title, reserves }: { title: string; reserves: Reservation[] }
       <div className="space-y-4">
         {hours.map(hour => (
           <div key={hour}>
-            <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>{hour}</p>
+            <p className="agenda-hour">{hour}</p>
             <div className="space-y-2">
               {byHour[hour].map(r => <ReservationCard key={r.id} reservation={r} />)}
             </div>
@@ -349,15 +343,14 @@ function SetmanaView({
   })
 
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="agenda-week">
       {days.map(({ iso, dayLabel, rsvs, isPast, isToday }) => {
         const pax = rsvs.reduce((s, r) => s + r.party_size, 0)
         return (
-          <div key={iso} className="card" style={{ padding: 0, opacity: isPast && !isToday ? 0.6 : 1 }}>
+          <div key={iso} className={`card agenda-week-day ${isToday ? 'is-today' : ''}`} style={{ padding: 0 }}>
             <div
+              className="agenda-week-heading"
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 16px', cursor: 'pointer',
                 borderBottom: rsvs.length ? '1px solid var(--border)' : undefined,
               }}
               onClick={() => router.push(`/avui?data=${iso}`)}
@@ -387,9 +380,8 @@ function SetmanaView({
             {rsvs.length > 0 ? rsvs.map((r, idx) => (
               <div
                 key={r.id}
+                className="agenda-week-reservation"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '10px 16px', cursor: 'pointer',
                   borderTop: idx > 0 ? '1px solid var(--border)' : undefined,
                 }}
                 onClick={() => router.push(`/reserva/${r.id}`)}

@@ -8,7 +8,6 @@ import type { Employee, Shift, Absence, ShiftWithEmployee } from '@/db/schema'
 import type { LaborWarning } from '@/lib/labor'
 import EmpAvatar from '@/components/ui/EmpAvatar'
 
-const LABEL_COL = 36
 const HEADER_H = 32
 const SEG_GAP_PX = 28   // px between compressed segments
 const SEG_GAP_MIN = 90  // gaps > 90 min trigger compression
@@ -177,7 +176,7 @@ export default function EmployeeDayGantt({
 
   if (activeEmps.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+      <div className="team-gantt-empty" style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
         <div style={{ fontSize: 14, marginBottom: 16 }}>{t('equip.gantt.senseTorns')}</div>
         {role === 'owner' && employees && employees.length > 0 && onOpenEditor && (
           <button className="btn btn-primary btn-sm" onClick={() => onOpenEditor(employees[0].id, date)}>
@@ -206,7 +205,7 @@ export default function EmployeeDayGantt({
           <button
             onClick={() => setCompressed(false)}
             style={{
-              marginLeft: 'auto', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+              marginLeft: 'auto', minHeight: 44, fontSize: 13, fontWeight: 600, cursor: 'pointer',
               color: 'var(--text-muted)', background: 'none', border: 'none', padding: '2px 4px',
             }}
             title="Expandir eix de temps complet"
@@ -218,7 +217,7 @@ export default function EmployeeDayGantt({
           <button
             onClick={() => setCompressed(true)}
             style={{
-              marginLeft: 'auto', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+              marginLeft: 'auto', minHeight: 44, fontSize: 13, fontWeight: 600, cursor: 'pointer',
               color: 'var(--primary)', background: 'none', border: 'none', padding: '2px 4px',
             }}
             title="Comprimir gap entre torns"
@@ -229,10 +228,10 @@ export default function EmployeeDayGantt({
       </div>
 
       {/* Grid: columna de noms fixa + zona de barres amb scroll horitzontal */}
-      <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+      <div className="team-day-grid" style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
 
         {/* Columna esquerra — avatars fixos, sense scroll */}
-        <div style={{ width: LABEL_COL, flexShrink: 0, borderRight: '1px solid var(--border)' }}>
+        <div className="team-day-labels" style={{ flexShrink: 0, borderRight: '1px solid var(--border)' }}>
           <div style={{ height: HEADER_H, borderBottom: '2px solid var(--border)' }} />
           {groups.map(([roleLabel, emps]) => (
             <div key={roleLabel}>
@@ -246,9 +245,10 @@ export default function EmployeeDayGantt({
                 <div key={emp.id} style={{
                   height: ROW_H, display: 'flex', alignItems: 'center', gap: 6,
                   padding: '0 10px', borderBottom: '1px solid var(--border)',
-                  background: rowIdx % 2 === 1 ? 'rgba(0,0,0,0.015)' : 'transparent',
+                  background: rowIdx % 2 === 1 ? 'var(--surface)' : 'var(--bg)',
                 }}>
                   <EmpAvatar name={emp.name} color={emp.color} avatarUrl={emp.avatar_url} size={22} />
+                  <span className="team-day-name" title={emp.name}>{emp.name}</span>
                 </div>
               ))}
             </div>
@@ -256,8 +256,8 @@ export default function EmployeeDayGantt({
         </div>
 
         {/* Columna dreta — eix de temps + barres, amb scroll horitzontal */}
-        <div style={{ flex: 1, overflowX: 'auto' }}>
-          <div style={{ minWidth: segsTotalW ?? 400, width: segs ? (segsTotalW ?? undefined) : undefined, position: 'relative' }}>
+        <div className="team-day-scroll" style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
+          <div style={{ minWidth: segsTotalW ?? Math.max(400, ticks.length * 52), width: segs ? (segsTotalW ?? undefined) : undefined, position: 'relative' }}>
 
             {/* Time axis header */}
             <div style={{ height: HEADER_H, borderBottom: '2px solid var(--border)', position: 'relative' }}>
@@ -272,7 +272,7 @@ export default function EmployeeDayGantt({
                       <span key={tick} style={{
                         position: 'absolute', left: x,
                         transform: isFirst ? 'none' : isLast ? 'translateX(-100%)' : 'translateX(-50%)',
-                        top: 8, fontSize: 11, color: 'var(--text-muted)', pointerEvents: 'none',
+                        top: 8, fontSize: 12, fontWeight: 600, color: 'var(--text)', pointerEvents: 'none',
                       }}>
                         {fmtHour(tick)}
                       </span>
@@ -294,7 +294,7 @@ export default function EmployeeDayGantt({
                     position: 'absolute',
                     left: `${(tick - axisStart) / totalMinutes * 100}%`,
                     transform: i === 0 ? 'none' : i === ticks.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
-                    top: 8, fontSize: 11, color: 'var(--text-muted)', pointerEvents: 'none',
+                    top: 8, fontSize: 12, fontWeight: 600, color: 'var(--text)', pointerEvents: 'none',
                   }}>
                     {fmtHour(tick)}
                   </span>
@@ -323,7 +323,7 @@ export default function EmployeeDayGantt({
                       style={{
                         height: ROW_H, position: 'relative',
                         borderBottom: '1px solid var(--border)',
-                        background: rowIdx % 2 === 1 ? 'rgba(0,0,0,0.015)' : 'transparent',
+                        background: rowIdx % 2 === 1 ? 'var(--surface)' : 'var(--bg)',
                         cursor: role === 'owner' && !absence ? 'pointer' : 'default',
                       }}
                       onClick={e => {

@@ -304,7 +304,7 @@ export default function GanttView({
   for (let gi = 0; gi < groups.length; gi++) {
     const rows: RowMeta[] = groups[gi].tables.map((tbl, ti) => ({
       tbl,
-      rowBg: bgIdx++ % 2 === 1 ? 'rgba(0,0,0,0.04)' : '#ffffff',
+      rowBg: bgIdx++ % 2 === 1 ? 'var(--surface)' : 'var(--bg)',
       isLast: gi === groups.length - 1 && ti === groups[gi].tables.length - 1,
     }))
     groupMetas.push({ label: groups[gi].label, rows })
@@ -399,7 +399,7 @@ export default function GanttView({
 
   // ── Zoom button style ─────────────────────────────────────────────────────
   const zoomBtnStyle: React.CSSProperties = {
-    width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)',
+    width: 44, height: 44, borderRadius: 9, border: '1px solid var(--border)',
     background: 'var(--bg)', color: 'var(--text-muted)', fontSize: 16, lineHeight: 1,
     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
@@ -407,10 +407,10 @@ export default function GanttView({
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div className="agenda-gantt">
 
       {/* Zoom controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+      <div className="gantt-toolbar">
         <button
           style={zoomBtnStyle}
           onClick={() => setZoom(z => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2)))}
@@ -436,19 +436,19 @@ export default function GanttView({
       </div>
 
       {/* Gantt grid */}
-      <div style={{ display: 'flex', border: '1px solid rgba(0,0,0,0.2)', borderRadius: 12, overflow: 'hidden' }}>
+      <div className="gantt-grid" style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
 
         {/* ── LEFT COLUMN: table labels, always visible ── */}
         <div style={{
           flexShrink: 0,
           width: tableColW,
-          borderRight: '1px solid rgba(0,0,0,0.15)',
-          background: '#ffffff',
+          borderRight: '1px solid var(--border)',
+          background: 'var(--bg)',
         }}>
           <div style={{
             height: HEADER_H_Z,
-            background: '#f3f4f6',
-            borderBottom: '2px solid rgba(0,0,0,0.15)',
+            background: 'var(--surface)',
+            borderBottom: '2px solid var(--border)',
           }} />
 
           {groupMetas.map((gm) => (
@@ -457,8 +457,8 @@ export default function GanttView({
                 <div style={{
                   height: SEC_H_Z,
                   display: 'flex', alignItems: 'center', paddingLeft: 12,
-                  background: '#f3f4f6',
-                  borderBottom: '1px solid rgba(0,0,0,0.12)',
+                  background: 'var(--surface)',
+                  borderBottom: '1px solid var(--border)',
                   overflow: 'hidden',
                 }}>
                   <span style={{
@@ -476,7 +476,7 @@ export default function GanttView({
                   display: 'flex', flexDirection: 'column', justifyContent: 'center',
                   paddingLeft: 12,
                   background: rowBg,
-                  borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.12)',
+                  borderBottom: isLast ? 'none' : '1px solid var(--border)',
                   overflow: 'hidden',
                 }}>
                   <span style={{ fontWeight: 600, fontSize: Math.max(9, Math.round(13 * zoom)), color: 'var(--text)', lineHeight: 1.2 }}>{tbl.number}</span>
@@ -488,18 +488,18 @@ export default function GanttView({
         </div>
 
         {/* ── RIGHT CONTENT: scrolls horizontally ── */}
-        <div ref={containerRef} style={{ flex: 1, overflowX: 'auto', position: 'relative' }}>
+        <div ref={containerRef} className="gantt-scroll" style={{ flex: 1, minWidth: 0, overflowX: 'auto', position: 'relative' }}>
 
           {/* Header: hour labels */}
           <div style={{
             position: 'relative', width: contentW, height: HEADER_H_Z,
-            background: '#f3f4f6', borderBottom: '2px solid rgba(0,0,0,0.15)',
+            background: 'var(--surface)', borderBottom: '2px solid var(--border)',
           }}>
             {hourMarkers.map(m => (
               <span key={m.x} style={{
                 position: 'absolute', left: m.x, top: '50%',
                 transform: m.x < 24 ? 'translateY(-50%)' : 'translate(-50%,-50%)',
-                fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap',
+                fontSize: 12, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap',
               }}>{m.label}</span>
             ))}
             {segs.slice(0, -1).map((s, i) => (
@@ -518,8 +518,8 @@ export default function GanttView({
               {hasBoth && (
                 <div style={{
                   width: contentW, height: SEC_H_Z,
-                  background: '#f3f4f6',
-                  borderBottom: '1px solid rgba(0,0,0,0.12)',
+                  background: 'var(--surface)',
+                  borderBottom: '1px solid var(--border)',
                 }} />
               )}
 
@@ -547,7 +547,7 @@ export default function GanttView({
                     style={{
                       position: 'relative', width: contentW, height: ROW_H_Z,
                       background: rowBg,
-                      borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.12)',
+                      borderBottom: isLast ? 'none' : '1px solid var(--border)',
                       cursor: 'pointer',
                     }}
                     onClick={e => {
@@ -579,7 +579,7 @@ export default function GanttView({
                     {hourMarkers.map(m => (
                       <div key={m.x} style={{
                         position: 'absolute', left: m.x, top: 0, bottom: 0,
-                        width: 1, background: 'rgba(0,0,0,0.25)', pointerEvents: 'none', zIndex: 1,
+                        width: 1, background: 'var(--grid-line)', pointerEvents: 'none', zIndex: 1,
                       }} />
                     ))}
 
@@ -599,12 +599,12 @@ export default function GanttView({
                             position: 'absolute', left: x + 2, top: barPad, width: w, height: ROW_H_Z - barPad * 2,
                             background: blockBg(r),
                             borderRadius: 6,
-                            border: '1px solid rgba(0,0,0,0.15)',
+                            border: '1px solid var(--border)',
                             cursor: onReservationMove ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
                             overflow: 'hidden',
                             padding: '3px 7px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
                             opacity: isDragging ? 0.4 : 1,
-                            boxShadow: '0 1px 4px rgba(0,0,0,0.22)',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
                             touchAction: 'none',
                             userSelect: 'none',
                             WebkitUserSelect: 'none',

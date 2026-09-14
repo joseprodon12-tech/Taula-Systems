@@ -476,6 +476,7 @@ export default function EquipClient({
 
     return (
       <div
+        className="team-shift-chip"
         data-shiftid={shift.id}
         onPointerDown={e => handleShiftPointerDown(e, shift)}
         onPointerMove={handleShiftPointerMove}
@@ -485,8 +486,8 @@ export default function EquipClient({
           background: chipBg,
           color: chipColor,
           borderRadius: 6,
-          padding: '2px 6px',
-          fontSize: 11,
+          padding: '7px 6px',
+          fontSize: 12,
           fontWeight: 600,
           cursor: role === 'owner' ? 'pointer' : 'default',
           border: chipBorder,
@@ -537,7 +538,7 @@ export default function EquipClient({
     // Punt 7: cap empleat → fila fantasma clicable en lloc de la graella buida
     if (employees.length === 0) {
       return (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="team-week-grid">
           <div style={{ minWidth: EMP_COL + 7 * 100 + 64, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
             {/* Capçalera de dies */}
             <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
@@ -569,7 +570,7 @@ export default function EquipClient({
     }
 
     return (
-      <div style={{ overflowX: 'auto' }}>
+      <div className="team-week-grid">
         <div style={{ minWidth: EMP_COL + 7 * 100 + 64 }}>
           {/* Day header row */}
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--surface)', position: 'sticky', top: 0, zIndex: 2 }}>
@@ -617,9 +618,9 @@ export default function EquipClient({
                 const weekH = empWeeklyH[emp.id] ?? 0
                 const warnWeek = hasWarning(emp.id)
                 return (
-                  <div key={emp.id} style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
+                  <div key={emp.id} className="team-week-row" style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
                     {/* Employee name */}
-                    <div style={{
+                    <div className="team-week-name" style={{
                       width: EMP_COL, flexShrink: 0, padding: '8px 10px',
                       display: 'flex', alignItems: 'center', gap: 6,
                       borderRight: '1px solid var(--border)',
@@ -654,7 +655,7 @@ export default function EquipClient({
                             display: 'flex', flexDirection: 'column', gap: 2,
                             cursor: role === 'owner' && !absence ? 'pointer' : 'default',
                             background: isTarget ? 'var(--primary-soft)' : day.iso === today ? 'rgba(217,119,6,0.03)' : 'transparent',
-                            minHeight: 44,
+                            minHeight: 64,
                             position: 'relative',
                           }}
                         >
@@ -707,10 +708,11 @@ export default function EquipClient({
 
   function renderMobileView() {
     const chipRow = (
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, marginBottom: 12 }}>
+      <div className="team-days">
         {/* Tot button */}
         <button
           onClick={() => setMobileDay('tot')}
+          aria-pressed={mobileDay === 'tot'}
           style={{
             flexShrink: 0, width: 44, height: 48, borderRadius: 10,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -731,8 +733,9 @@ export default function EquipClient({
             <button
               key={day.iso}
               onClick={() => setMobileDay(day.iso)}
+              aria-pressed={active}
               style={{
-                flexShrink: 0, width: 40, height: 48, borderRadius: 10,
+                flexShrink: 0, width: 44, height: 48, borderRadius: 10,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 fontSize: 10, fontWeight: 700, gap: 1, cursor: 'pointer', border: 'none',
                 background: active ? 'var(--primary)' : 'var(--bg)',
@@ -786,16 +789,16 @@ export default function EquipClient({
     return (
       <div>
         {chipRow}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 80 }}>
+        <div className="team-employee-cards">
           {employees.map(emp => {
             const weekH = empWeeklyH[emp.id] ?? 0
             const warnEmp = hasWarning(emp.id)
 
             return (
-              <div key={emp.id} className="card" style={{ padding: '12px 14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <div key={emp.id} className="card team-employee-card">
+                <div className="team-employee-heading">
                   <EmpAvatar name={emp.name} color={emp.color} avatarUrl={emp.avatar_url} size={22} />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', flex: 1 }}>{emp.name}</span>
+                  <div className="team-employee-name"><strong>{emp.name}</strong><span>{emp.role_label}</span></div>
                   {weekH > 0 && (
                     <span style={{ fontSize: 12, color: warnEmp ? 'var(--warning)' : 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
                       {weekH % 1 === 0 ? weekH : weekH.toFixed(1)}h
@@ -803,17 +806,17 @@ export default function EquipClient({
                     </span>
                   )}
                 </div>
-                {days.map(({ iso, label }, idx) => {
+                {days.map(({ iso, label }) => {
                   const dayShifts = (localShifts[iso] ?? []).filter(s => s.employee_id === emp.id)
                   const absence = absenceMap[emp.id]?.[iso]
                   const isEmpty = dayShifts.length === 0 && !absence
                   return (
                     <div
                       key={iso}
+                      className={`team-employee-day ${iso === today ? 'is-today' : ''}`}
                       onClick={() => { if (isEmpty && role === 'owner') handleOpenEditor(emp.id, iso) }}
                       style={{
-                        display: 'flex', gap: 8, fontSize: 12,
-                        paddingTop: 5, marginTop: idx === 0 ? 0 : 3,
+                        display: 'flex', gap: 12, fontSize: 13,
                         borderTop: '1px solid var(--border)',
                         cursor: isEmpty && role === 'owner' ? 'pointer' : 'default',
                       }}
@@ -826,7 +829,7 @@ export default function EquipClient({
                           {t(`equip.absencies.${absence.type}` as Parameters<typeof t>[0])}
                         </span>
                       ) : isEmpty ? (
-                        <span style={{ color: 'var(--border)' }}>—</span>
+                        <span style={{ color: 'var(--text-muted)' }}>—</span>
                       ) : (
                         <span style={{ color: 'var(--text)' }}>
                           {dayShifts.map(s => `${s.start_time}–${s.end_time}`).join(' · ')}
@@ -853,27 +856,27 @@ export default function EquipClient({
   // ── Main render ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex gap-6">
+    <div className="team-page flex gap-6">
       <div className="flex-1 min-w-0">
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+      <div className="team-header">
+        <div className="team-heading">
+          <h1>{t('nav.equip')}</h1>
+          <p>{vista === 'setmana' ? rangeLabel : diaGanttLabel}</p>
+        </div>
+        <div className="team-navigation">
         {/* Navigation (week or day) */}
         {vista === 'setmana' ? (
           <>
             <button
-              className="btn btn-ghost btn-sm"
-              style={{ padding: '0 10px' }}
+              className="btn btn-ghost team-arrow"
               onClick={() => router.push(`/equip?setmana=${prevMonday}`)}
               title={t('agenda.setmanaAnterior')}
             >
               <ChevronLeft size={16} />
             </button>
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{rangeLabel}</span>
-            </div>
             <button
-              className="btn btn-ghost btn-sm"
-              style={{ padding: '0 10px' }}
+              className="btn btn-ghost team-arrow"
               onClick={() => router.push(`/equip?setmana=${nextMonday}`)}
               title={t('agenda.setmanaSeguent')}
             >
@@ -891,19 +894,16 @@ export default function EquipClient({
         ) : (
           <>
             <button
-              className="btn btn-ghost btn-sm"
-              style={{ padding: '0 10px' }}
+              className="btn btn-ghost team-arrow"
               onClick={() => navDay(-1)}
+              aria-label={t('avui.anteriorDia')}
             >
               <ChevronLeft size={16} />
             </button>
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{diaGanttLabel.charAt(0).toUpperCase() + diaGanttLabel.slice(1)}</span>
-            </div>
             <button
-              className="btn btn-ghost btn-sm"
-              style={{ padding: '0 10px' }}
+              className="btn btn-ghost team-arrow"
               onClick={() => navDay(1)}
+              aria-label={t('avui.seguent')}
             >
               <ChevronRight size={16} />
             </button>
@@ -920,17 +920,18 @@ export default function EquipClient({
 
         {/* Calendari (mòbil) */}
         <button
-          className="btn btn-ghost btn-sm md:hidden"
-          style={{ padding: '6px 8px', marginLeft: 'auto' }}
+          className="btn btn-ghost team-arrow xl:hidden"
+          aria-label={t('avui.calendari')}
           onClick={() => setShowCalendar(true)}
         >
           <CalendarDays size={16} />
         </button>
 
+        </div>
+        <div className="team-toolbar">
         {/* Gestionar empleats */}
         <button
-          className="btn btn-ghost btn-sm"
-          style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+          className="btn btn-ghost team-manage"
           onClick={() => router.push('/equip/empleats')}
         >
           <Users size={14} />
@@ -938,26 +939,27 @@ export default function EquipClient({
         </button>
 
         {/* View toggle Setmana | Dia (hidden on mobile) */}
-        <div className="hidden xl:flex" style={{ borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div className="team-views hidden xl:flex">
           <button
-            className={`btn btn-sm ${vista === 'setmana' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ borderRadius: 0, border: 'none', minHeight: 32 }}
+            className="agenda-view"
+            aria-pressed={vista === 'setmana'}
             onClick={() => switchVista('setmana')}
           >
             {t('equip.gantt.setmana')}
           </button>
           <button
-            className={`btn btn-sm ${vista === 'dia' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ borderRadius: 0, border: 'none', minHeight: 32, borderLeft: '1px solid var(--border)' }}
+            className="agenda-view"
+            aria-pressed={vista === 'dia'}
             onClick={() => switchVista('dia')}
           >
             {t('equip.gantt.dia')}
           </button>
         </div>
 
+        </div>
         {/* Owner actions */}
         {role === 'owner' && (
-          <>
+          <div className="team-actions">
             {vista === 'setmana' && (
               <>
                 <button
@@ -985,8 +987,7 @@ export default function EquipClient({
               const target = mobileDay !== 'tot' ? mobileDay : diaGantt
               return (
                 <button
-                  className="btn btn-ghost btn-sm"
-                  style={{ color: 'var(--state-noshow)' }}
+                  className="btn btn-ghost btn-sm team-delete"
                   onClick={inDay ? () => handleDeleteDay(target) : handleDeleteWeek}
                   disabled={isPending}
                 >
@@ -994,7 +995,7 @@ export default function EquipClient({
                 </button>
               )
             })()}
-          </>
+          </div>
         )}
       </div>
 

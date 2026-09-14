@@ -19,6 +19,11 @@ const ca = {
     guardar:    'Guardar reserva',
     cancellar:  'Cancel·lar reserva',
     tornar:     '← Tornar',
+    grups: {
+      quan: 'Quan i quantes persones',
+      client: 'Dades del client',
+      detalls: 'Taula i notes',
+    },
     taulaLabel: 'Taula',
     seccions: {
       interior: 'Interior',
@@ -209,6 +214,9 @@ const ca = {
   },
   config: {
     titol:  'Configuració',
+    organitzacio: {
+      afegirTancat: 'Afegir dia tancat',
+    },
     idioma: 'Idioma',
     idiomes: {
       ca: 'Català',
@@ -289,6 +297,11 @@ const es: DeepString<typeof ca> = {
     guardar:    'Guardar reserva',
     cancellar:  'Cancelar reserva',
     tornar:     '← Volver',
+    grups: {
+      quan: 'Cuándo y cuántas personas',
+      client: 'Datos del cliente',
+      detalls: 'Mesa y notas',
+    },
     taulaLabel: 'Mesa',
     seccions: {
       interior: 'Interior',
@@ -479,6 +492,9 @@ const es: DeepString<typeof ca> = {
   },
   config: {
     titol:  'Configuración',
+    organitzacio: {
+      afegirTancat: 'Añadir día de cierre',
+    },
     idioma: 'Idioma',
     idiomes: {
       ca: 'Català',

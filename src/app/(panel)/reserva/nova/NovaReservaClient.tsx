@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { CalendarDays, UserRound, Armchair } from 'lucide-react'
 import { Toast, useToast } from '@/components/ui/Toast'
 import TimeWheelPicker from '@/components/TimeWheelPicker'
 import DatePicker from '@/components/DatePicker'
@@ -178,17 +179,16 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
   const endTime = time ? addMinutesToTime(time, durationMinutes) : null
 
   return (
-    <div style={{ maxWidth: 560, margin: '0 auto' }}>
+    <div className="reservation-page">
       {/* Capçalera */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="reservation-header">
         <button
           onClick={() => { if (window.history.length > 1) router.back(); else router.push('/avui') }}
-          className="btn btn-ghost btn-sm"
-          style={{ padding: '6px 8px', border: '1px solid var(--border)' }}
+          className="btn btn-ghost reservation-back"
         >
           {t('reserva.tornar')}
         </button>
-        <h1 className="text-lg font-bold" style={{ color: 'var(--text)' }}>
+        <h1>
           {edit ? t('reserva.editar') : t('reserva.nova')}
         </h1>
         {initialTableId && !edit && (() => {
@@ -202,11 +202,14 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
       </div>
 
       <form
+        className="reservation-form"
         onSubmit={handleSubmit}
         style={{ opacity: pending ? 0.6 : 1, pointerEvents: pending ? 'none' : 'auto' }}
       >
+        <section className="reservation-section" aria-labelledby="reservation-when-title">
+          <h2 id="reservation-when-title"><CalendarDays size={18} aria-hidden="true" />{t('reserva.grups.quan')}</h2>
         {/* Data */}
-        <div style={{ marginBottom: 12 }}>
+        <div className="reservation-field">
           <span className="label">{t('reserva.camps.data')}</span>
           <DatePicker
             value={date}
@@ -217,12 +220,12 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         </div>
 
         {/* Hora d'entrada */}
-        <div style={{ marginBottom: 12 }}>
+        <div className="reservation-field">
           <span className="label">{t('reserva.camps.hora')}</span>
           {slotsLoading ? (
             <p className="text-sm" style={{ color: 'var(--text-muted)', marginTop: 8 }}>{t('common.carregant')}</p>
           ) : closed ? (
-            <p className="text-sm" style={{ color: 'var(--text-muted)', marginTop: 8 }}>
+            <p className="reservation-closed">
               {t('reserva.missatges.tancat')}
             </p>
           ) : (
@@ -238,9 +241,9 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
 
         {/* Durada estimada */}
         {endTime && (
-          <div style={{ padding: '12px 16px', marginBottom: 20, background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 8 }}>
+          <div className="reservation-duration">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>
                 Durada estimada
               </p>
               <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
@@ -272,24 +275,25 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         )}
 
         {/* Fila 2: Persones + Secció */}
-        <div className="grid grid-cols-1 gap-3 mb-5">
+        <div className="reservation-options">
           {/* Persones */}
           <div>
             <label className="label">{t('reserva.camps.persones')}</label>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div className="reservation-party-options">
               {[1, 2, 3, 4, 5, 6, 7].map(n => (
                 <button
                   key={n}
                   type="button"
                   className={`btn btn-sm ${partySize === n && !showStepper ? 'btn-primary' : 'btn-ghost'}`}
                   style={{ flex: 1, minHeight: 44 }}
+                  aria-pressed={partySize === n && !showStepper}
                   onClick={() => { setPartySize(n); setShowStepper(false) }}
                 >
                   {n}
                 </button>
               ))}
               {showStepper ? (
-                <>
+                <div className="reservation-party-stepper">
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
@@ -313,7 +317,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                   >
                     +
                   </button>
-                </>
+                </div>
               ) : (
                 <button
                   type="button"
@@ -331,11 +335,12 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           {hasOutdoor && (
             <div>
               <label className="label">{t('reserva.camps.seccio')}</label>
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div className="reservation-section-options">
                 <button
                   type="button"
                   className={`btn btn-sm ${section === 'indoor' ? 'btn-primary' : 'btn-ghost'}`}
                   style={{ minHeight: 44 }}
+                  aria-pressed={section === 'indoor'}
                   onClick={() => setSection('indoor')}
                 >
                   {t('reserva.seccions.interior')}
@@ -344,6 +349,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                   type="button"
                   className={`btn btn-sm ${section === 'outdoor' ? 'btn-primary' : 'btn-ghost'}`}
                   style={{ minHeight: 44 }}
+                  aria-pressed={section === 'outdoor'}
                   onClick={() => setSection('outdoor')}
                 >
                   {t('reserva.seccions.terrassa')}
@@ -353,8 +359,11 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           )}
         </div>
 
+        </section>
+        <section className="reservation-section" aria-labelledby="reservation-client-title">
+          <h2 id="reservation-client-title"><UserRound size={18} aria-hidden="true" />{t('reserva.grups.client')}</h2>
         {/* Fila 3: Nom */}
-        <div style={{ marginBottom: 16 }}>
+        <div className="reservation-field">
           <label style={{ display: 'block' }}>
             <span className="label">{t('reserva.camps.nom')}</span>
             <input
@@ -370,7 +379,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         </div>
 
         {/* Fila 4: Telèfon */}
-        <div style={{ marginBottom: 16 }}>
+        <div className="reservation-field">
           <label style={{ display: 'block' }}>
             <span className="label">{t('reserva.camps.telefon')}</span>
             <input
@@ -395,7 +404,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                 <span style={{ fontWeight: 400 }}>última vegada el {formatShortDate(customerHistory.lastDate)}</span>
               </p>
               {customerHistory.recentNote && (
-                <p style={{ fontSize: 12, color: '#4338CA' }}>
+                <p style={{ fontSize: 13, color: 'var(--text)' }}>
                   Nota anterior: {customerHistory.recentNote}
                 </p>
               )}
@@ -404,7 +413,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         </div>
 
         {/* Fila 5: Email (opcional) */}
-        <div style={{ marginBottom: 16 }}>
+        <div className="reservation-field">
           <label style={{ display: 'block' }}>
             <span className="label">
               {t('reserva.camps.email')} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{t('reserva.camps.opcional')}</span>
@@ -419,14 +428,18 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           </label>
         </div>
 
+        </section>
+        <section className="reservation-section" aria-labelledby="reservation-details-title">
+          <h2 id="reservation-details-title"><Armchair size={18} aria-hidden="true" />{t('reserva.grups.detalls')}</h2>
         {/* Fila 6: Número de taula (opcional) */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block' }}>
-            <span className="label">
+        <div className="reservation-field">
+          <div role="group" aria-labelledby="reservation-table-label">
+            <label id="reservation-table-label" htmlFor={tables.length === 0 ? 'reservation-table-text' : undefined} className="label">
               {t('reserva.camps.taula')} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{t('reserva.camps.opcional')}</span>
-            </span>
+            </label>
           {tables.length === 0 ? (
             <input
+              id="reservation-table-text"
               type="text"
               className="input"
               placeholder="Ex: T-3, Barra, Terrassa 2"
@@ -443,7 +456,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                     <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>
                       {sec === 'indoor' ? t('reserva.seccions.interior') : t('reserva.seccions.terrassa')}
                     </p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <div className="reservation-table-options">
                       {group.map(table => {
                         const isOccupied = occupiedTableNumbers.has(table.number)
                         const isSelected = tableId === table.id
@@ -451,12 +464,13 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                           <button
                             key={table.id}
                             type="button"
-                            className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-ghost'}`}
+                            className={`btn reservation-table-option ${isSelected ? 'btn-primary' : 'btn-ghost'}`}
+                            aria-pressed={isSelected}
                             onClick={() => setTableId(id => id === table.id ? '' : table.id)}
                             style={{ opacity: isOccupied && !isSelected ? 0.4 : 1, position: 'relative' }}
                           >
                             {table.number}
-                            <span style={{ color: isSelected ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)', fontSize: 11, marginLeft: 4 }}>
+                            <span style={{ color: isSelected ? '#fff' : 'var(--text-muted)', fontSize: 12 }}>
                               {table.capacity}p
                             </span>
                             {isOccupied && !isSelected && (
@@ -476,7 +490,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
               })}
             </div>
           )}
-          </label>
+          </div>
 
           {tables.length > 0 && (
             <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
@@ -521,7 +535,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         </div>
 
         {/* Fila 7: Notes (opcional) */}
-        <div style={{ marginBottom: 24 }}>
+        <div className="reservation-field">
           <label style={{ display: 'block' }}>
             <span className="label">
               {t('reserva.camps.notes')} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{t('reserva.camps.opcional')}</span>
@@ -537,11 +551,11 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           </label>
         </div>
 
+        </section>
         {/* Submit */}
         <button
           type="submit"
-          className="btn btn-primary btn-lg"
-          style={{ width: '100%' }}
+          className="btn btn-primary btn-lg reservation-submit"
           disabled={pending || (!edit && closed)}
         >
           {pending ? 'Guardant...' : t('reserva.guardar')}
