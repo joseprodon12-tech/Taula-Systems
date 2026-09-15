@@ -22,21 +22,27 @@ export async function createTable(data: {
   section: 'indoor' | 'outdoor'
   capacity: number
 }): Promise<{ id: string } | { error: string }> {
-  if (!data.number.trim()) return { error: 'El número de taula és obligatori' }
+  const number = data.number.trim()
+  if (!number) return { error: 'El número de taula és obligatori' }
 
   const { supabase, restaurant, role } = await getAuthRestaurant()
   if (role !== 'owner') return { error: 'Sense permisos' }
 
   const { data: existing } = await supabase
     .from('tables')
-    .select('sort_order')
+    .select('number, sort_order')
     .eq('restaurant_id', restaurant.id)
+
+  // Les reserves identifiquen la taula pel número: dues d'iguals farien ambigus els conflictes i la zona
+  if ((existing || []).some((t: { number: string }) => t.number === number)) {
+    return { error: `Ja hi ha una taula amb el número ${number}` }
+  }
 
   const maxOrder = (existing || []).reduce((m: number, t: { sort_order: number }) => Math.max(m, t.sort_order), -1)
 
   const { data: newTable, error } = await supabase.from('tables').insert({
     restaurant_id: restaurant.id,
-    number: data.number.trim(),
+    number,
     section: data.section,
     capacity: data.capacity,
     sort_order: maxOrder + 1,
@@ -52,13 +58,21 @@ export async function updateTable(id: string, data: {
   section: 'indoor' | 'outdoor'
   capacity: number
 }): Promise<{ ok: true } | { error: string }> {
-  if (!data.number.trim()) return { error: 'El número de taula és obligatori' }
+  const number = data.number.trim()
+  if (!number) return { error: 'El número de taula és obligatori' }
 
   const { supabase, restaurant, role } = await getAuthRestaurant()
   if (role !== 'owner') return { error: 'Sense permisos' }
 
+  const [{ data: current }, { data: sameNumber }] = await Promise.all([
+    supabase.from('tables').select('number, section').eq('id', id).eq('restaurant_id', restaurant.id).maybeSingle(),
+    supabase.from('tables').select('id').eq('restaurant_id', restaurant.id).eq('number', number).neq('id', id),
+  ])
+  if (!current) return { error: 'Taula no trobada' }
+  if (sameNumber && sameNumber.length > 0) return { error: `Ja hi ha una taula amb el número ${number}` }
+
   const { error } = await supabase.from('tables').update({
-    number: data.number.trim(),
+    number,
     section: data.section,
     capacity: data.capacity,
   })
@@ -66,6 +80,21 @@ export async function updateTable(id: string, data: {
     .eq('restaurant_id', restaurant.id)
 
   if (error) return { error: 'Error en actualitzar la taula' }
+
+  // Les reserves guarden el número i la zona: sense això apuntarien a una taula que ja no existeix.
+  // Les passades es deixen com a historial.
+  if (current.number !== number || current.section !== data.section) {
+    const { error: resError } = await supabase.from('reservations')
+      .update({ table_number: number, section: data.section, updated_at: new Date().toISOString() })
+      .eq('restaurant_id', restaurant.id)
+      .eq('table_number', current.number)
+      .gte('date', todayISO())
+      .in('status', ['pending', 'arrived', 'standby'])
+    if (resError) return { error: "Taula desada, però no s'han pogut actualitzar les reserves que la tenen assignada" }
+    revalidatePath('/avui')
+    revalidatePath('/agenda')
+  }
+
   revalidatePath('/config')
   return { ok: true }
 }

@@ -40,16 +40,29 @@ interface Props {
   dayReservations: Reservation[]
   reservationsByDay: Record<string, Reservation[]>
   dots: Record<string, { count: number; pax: number }>
+  capacityWarning: 'indoor' | 'outdoor' | null
 }
 
 export default function AgendaClient({
-  vista, today, selectedDate, restaurant, tables, dayReservations, reservationsByDay, dots,
+  vista, today, selectedDate, restaurant, tables, dayReservations, reservationsByDay, dots, capacityWarning,
 }: Props) {
   const router = useRouter()
   const { t, locale } = useT()
   const { toast, show, hide } = useToast()
   const il = locale === 'ca' ? 'ca' : 'es'
   const [showCalendar, setShowCalendar] = useState(false)
+  const [warningDismissed, setWarningDismissed] = useState(false)
+
+  // L'avís arriba per URL: el formulari navega aquí just després de desar i un toast allà es perdria
+  const capacityMessage = (() => {
+    if (!capacityWarning) return null
+    const occupied = dayReservations
+      .filter(r => r.section === capacityWarning && (r.status === 'pending' || r.status === 'arrived'))
+      .reduce((s, r) => s + r.party_size, 0)
+    const capacity = capacityWarning === 'indoor' ? restaurant.capacity_indoor : restaurant.capacity_outdoor
+    const label = capacityWarning === 'indoor' ? t('reserva.seccions.interior') : t('reserva.seccions.terrassa')
+    return `${label}: ${occupied}/${capacity} ${t('reserva.missatges.capacitat')}`
+  })()
 
   function switchVista(v: Vista) {
     const data = v === 'setmana' ? getMondayISO(selectedDate) : selectedDate
@@ -58,7 +71,12 @@ export default function AgendaClient({
 
   async function handleMove(id: string, tableId: string, time: string) {
     const result = await moveReservation(id, tableId, time)
-    if ('error' in result) show(result.error, 'error')
+      .catch(() => ({ error: t('reserva.missatges.errorGeneric') }))
+    if ('error' in result) {
+      show(result.error, 'error')
+      // GanttView desfà el moviment visual quan la promesa falla
+      throw new Error(result.error)
+    }
   }
 
   // ── Day header label ───────────────────────────────────────────────────────────
@@ -185,6 +203,22 @@ export default function AgendaClient({
           <CalendarDays size={16} />
         </button>
       </div>
+
+      {capacityMessage && !warningDismissed && (
+        <div
+          role="status"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, padding: '10px 14px',
+            borderLeft: '3px solid var(--warning)', borderRadius: '0 8px 8px 0',
+            background: 'var(--warning-bg)', color: 'var(--text)', fontSize: 14,
+          }}
+        >
+          <span style={{ flex: 1 }}>⚠️ {capacityMessage}</span>
+          <button className="btn btn-ghost btn-sm" style={{ minHeight: 44 }} onClick={() => setWarningDismissed(true)}>
+            D&apos;acord
+          </button>
+        </div>
+      )}
 
       {/* ── Contingut ── */}
       {vista === 'gantt' && (
@@ -395,6 +429,11 @@ function SetmanaView({
                 <span style={{ fontSize: 13, color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {r.customer_name}
                 </span>
+                {r.allergies.length > 0 && (
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning)', flexShrink: 0 }}>
+                    {t('reserva.camps.alergies')}
+                  </span>
+                )}
                 <span className={`badge ${STATUS_BADGE[r.status] ?? 'badge-pending'}`} style={{ flexShrink: 0 }}>
                   {t(`reserva.estats.${r.status}` as TKey)}
                 </span>

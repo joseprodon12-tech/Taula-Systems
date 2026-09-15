@@ -145,10 +145,7 @@ export function registerReservationTools(server: McpServer) {
     title: "Canviar l'estat d'una reserva",
     description: "Marca una reserva com a pendent (pending), arribada (arrived) o no presentada (no_show). Per cancel·lar, fes servir cancellar_reserva.",
     inputSchema: { id, estat: z.enum(['pending', 'arrived', 'no_show']) },
-  }, async ({ id, estat }) => {
-    await updateReservationStatus(id, estat)
-    return reply({ ok: true })
-  })
+  }, async ({ id, estat }) => reply(await updateReservationStatus(id, estat)))
 
   server.registerTool('cancellar_reserva', {
     title: 'Cancel·lar reserva',

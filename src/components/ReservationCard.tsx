@@ -4,6 +4,7 @@ import { useTransition, useState } from 'react'
 import { Phone, FileText, Users, CheckCircle, XCircle, RotateCcw, ChevronRight } from 'lucide-react'
 import { updateReservationStatus } from '@/app/actions/reservations'
 import { useT } from '@/context/LocaleContext'
+import { Toast, useToast } from '@/components/ui/Toast'
 import type { Reservation } from '@/db/schema'
 import Link from 'next/link'
 
@@ -23,10 +24,19 @@ export default function ReservationCard({ reservation: r }: Props) {
   const [isPending, startTransition] = useTransition()
   const [optimisticStatus, setOptimisticStatus] = useState(r.status)
   const { t } = useT()
+  const { toast, show, hide } = useToast()
 
   function setStatus(status: 'arrived' | 'no_show' | 'pending') {
+    const previous = optimisticStatus
     setOptimisticStatus(status)
-    startTransition(() => updateReservationStatus(r.id, status))
+    startTransition(async () => {
+      const result = await updateReservationStatus(r.id, status)
+        .catch(() => ({ error: t('reserva.missatges.errorGeneric') }))
+      if ('error' in result) {
+        setOptimisticStatus(previous)
+        show(result.error, 'error')
+      }
+    })
   }
 
   const isActionable = optimisticStatus === 'pending' || optimisticStatus === 'arrived' || optimisticStatus === 'no_show'
@@ -36,6 +46,8 @@ export default function ReservationCard({ reservation: r }: Props) {
       className="block card hover:shadow-sm transition-shadow"
       style={{ opacity: isPending ? 0.6 : 1, transition: 'opacity 0.15s' }}
     >
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hide} />}
+
       {/* Top row: nom + pax + badge + detall */}
       <div className="flex items-start justify-between gap-2 mb-1">
         <div className="flex items-center gap-3">

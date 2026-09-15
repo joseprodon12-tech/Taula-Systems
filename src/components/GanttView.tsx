@@ -592,7 +592,7 @@ export default function GanttView({
                       return (
                         <div
                           key={r.id}
-                          title={`${r.customer_name} · ×${r.party_size} · ${r.time}`}
+                          title={`${r.customer_name} · ×${r.party_size} · ${r.time}${r.allergies.length > 0 ? ` · ${t('reserva.camps.alergies')}` : ''}`}
                           onPointerDown={e => startDrag(e, r, tbl.id)}
                           onClick={e => e.stopPropagation()}
                           style={{
@@ -633,6 +633,14 @@ export default function GanttView({
                               <span style={{ fontSize: 13, whiteSpace: 'nowrap', color: blockSubFg(r) }}>
                                 ×{r.party_size}
                               </span>
+                              {r.allergies.length > 0 && (
+                                <span style={{
+                                  fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', padding: '0 4px', borderRadius: 4,
+                                  background: 'var(--warning-bg)', color: 'var(--warning)',
+                                }}>
+                                  {t('reserva.camps.alergies')}
+                                </span>
+                              )}
                               {r.notes && (
                                 <span style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: blockSubFg(r), fontStyle: 'italic' }}>
                                   {r.notes.length > 8 ? r.notes.slice(0, 8) + '…' : r.notes}

@@ -22,15 +22,17 @@ export async function getReservationsForDay(date: string): Promise<Reservation[]
 export async function updateReservationStatus(
   id: string,
   status: 'pending' | 'arrived' | 'no_show' | 'cancelled',
-) {
+): Promise<{ ok: true } | { error: string }> {
   const { supabase, restaurant } = await getAuthRestaurant()
   const { error } = await supabase
     .from('reservations')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('restaurant_id', restaurant.id)
-  if (error) throw error
+  if (error) return { error: "No s'ha pogut desar l'estat. Torna-ho a provar." }
   revalidatePath('/avui')
+  revalidatePath('/agenda')
+  return { ok: true }
 }
 
 export async function getReservationsForWeek(
@@ -317,13 +319,15 @@ export async function updateReservation(
   return { ok: true }
 }
 
-export async function cancelReservation(id: string): Promise<{ ok: true }> {
+export async function cancelReservation(id: string): Promise<{ ok: true } | { error: string }> {
   const { supabase, restaurant } = await getAuthRestaurant()
-  await supabase.from('reservations')
+  const { error } = await supabase.from('reservations')
     .update({ status: 'cancelled', updated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('restaurant_id', restaurant.id)
+  if (error) return { error: "No s'ha pogut cancel·lar la reserva. Torna-ho a provar." }
   revalidatePath('/avui')
+  revalidatePath('/agenda')
   revalidatePath('/reserva/' + id)
   return { ok: true }
 }

@@ -46,21 +46,33 @@ function getStatusStyle(s: string, active: boolean): React.CSSProperties {
 export default function ReservaDetallClient({ reservation, tables, customerHistory }: Props) {
   const router = useRouter()
   const { t, locale } = useT()
-  const { toast, hide } = useToast()
+  const { toast, show, hide } = useToast()
   const [pending, startTransition] = useTransition()
   const [status, setStatus] = useState(reservation.status)
   const [showCancelSheet, setShowCancelSheet] = useState(false)
 
   function handleStatusChange(newStatus: 'pending' | 'arrived' | 'no_show') {
+    const previous = status
     setStatus(newStatus)
     startTransition(async () => {
-      await updateReservationStatus(reservation.id, newStatus)
+      const result = await updateReservationStatus(reservation.id, newStatus)
+        .catch(() => ({ error: t('reserva.missatges.errorGeneric') }))
+      if ('error' in result) {
+        setStatus(previous)
+        show(result.error, 'error')
+      }
     })
   }
 
   function handleCancel() {
     startTransition(async () => {
-      await cancelReservation(reservation.id)
+      const result = await cancelReservation(reservation.id)
+        .catch(() => ({ error: t('reserva.missatges.errorGeneric') }))
+      if ('error' in result) {
+        setShowCancelSheet(false)
+        show(result.error, 'error')
+        return
+      }
       router.push('/avui')
     })
   }
