@@ -33,7 +33,9 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/auth/') ||
     request.nextUrl.pathname.startsWith('/api/widget/') ||
     // El cron de Vercel no porta sessió: s'autentica amb CRON_SECRET a la ruta
-    request.nextUrl.pathname.startsWith('/api/cron/')
+    request.nextUrl.pathname.startsWith('/api/cron/') ||
+    // Els clients MCP no porten cookie: s'autentiquen amb MCP_TOKENS a la ruta
+    request.nextUrl.pathname.startsWith('/api/mcp')
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
