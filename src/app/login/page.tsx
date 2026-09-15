@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from '@/app/actions/auth'
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('')  // username o email
@@ -17,24 +17,9 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const supabase = createClient()
-    let email = identifier.trim()
-
-    // Si no conté '@', és un username → buscar l'email via RPC
-    if (!email.includes('@')) {
-      const { data, error: rpcError } = await supabase
-        .rpc('get_email_by_username', { p_username: email })
-      if (rpcError || !data) {
-        setError('Usuari no trobat.')
-        setLoading(false)
-        return
-      }
-      email = data as string
-    }
-
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
-    if (authError) {
-      setError('Credencials incorrectes.')
+    const result = await signIn(identifier, password)
+    if (result?.error) {
+      setError(result.error)
       setLoading(false)
     } else {
       router.push('/avui')
