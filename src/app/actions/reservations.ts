@@ -110,6 +110,17 @@ export async function createReservation(data: {
 
   const { supabase, restaurant } = await getAuthRestaurant()
 
+  // El formulari ja ho impedeix, però el connector MCP no hi passa: la regla viu aquí
+  const { data: closure } = await supabase
+    .from('closures')
+    .select('id')
+    .eq('restaurant_id', restaurant.id)
+    .eq('date', data.date)
+    .maybeSingle()
+  if (closure || getAvailableSlots(restaurant.weekly_hours, data.date).length === 0) {
+    return { error: 'El restaurant és tancat aquest dia', fieldErrors: { date: 'Dia tancat' } }
+  }
+
   const hour = parseInt(data.time.split(':')[0])
   const isLunch = hour >= 12 && hour < 17
   const duration = data.duration_minutes

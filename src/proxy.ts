@@ -34,7 +34,7 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/api/widget/') ||
     // El cron de Vercel no porta sessió: s'autentica amb CRON_SECRET a la ruta
     request.nextUrl.pathname.startsWith('/api/cron/') ||
-    // Els clients MCP no porten cookie: s'autentiquen amb MCP_TOKENS a la ruta
+    // Els clients MCP no porten cookie: s'autentiquen amb token OAuth a la ruta
     request.nextUrl.pathname.startsWith('/api/mcp') ||
     // Descobriment OAuth per a clients MCP
     request.nextUrl.pathname.startsWith('/.well-known/')

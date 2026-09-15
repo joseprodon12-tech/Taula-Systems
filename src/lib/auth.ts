@@ -1,10 +1,28 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
+import { createClient as createTokenClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import type { Restaurant } from '@/db/schema'
 
+// Token OAuth de la petició MCP en curs. Les server actions criden
+// getAuthRestaurant() tant des del panell com des del connector: amb aquest
+// context actuen com l'usuari del token, amb les mateixes regles RLS i rol.
+const accessTokenContext = new AsyncLocalStorage<string>()
+
+export function runWithAccessToken<T>(token: string, fn: () => Promise<T>): Promise<T> {
+  return accessTokenContext.run(token, fn)
+}
+
 // Retorna sessió + restaurant + rol. Llença si no autenticat o sense restaurant assignat.
 export async function getAuthRestaurant() {
-  const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const token = accessTokenContext.getStore()
+  const supabase: SupabaseClient = token
+    ? createTokenClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+        auth: { persistSession: false },
+      })
+    : await createClient()
+
+  const { data: { user }, error } = await supabase.auth.getUser(token)
   if (error || !user) throw new Error('No autenticat')
 
   const { data: member } = await supabase

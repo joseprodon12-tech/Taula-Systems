@@ -72,7 +72,7 @@ function buildWhatsAppBody(restaurant: Restaurant, reservation: Reservation, kin
     case 'confirmation':
       return `🍽️ *${restaurant.name}*\n\nHola ${reservation.customer_name}! La teva reserva ha estat rebuda.\n\n📅 ${formattedDate}\n🕐 ${reservation.time}h\n👥 ${paxText}\n\nEn 24 hores rebràs un recordatori. Si necessites canviar, respon a aquest missatge.`
     case 'reminder':
-      return `🍽️ *${restaurant.name}*\n\nHola ${reservation.customer_name}! Et recordem la teva reserva de demà.\n\n📅 ${formattedDate}\n🕐 ${reservation.time}h\n👥 ${paxText}\n\nEt esperem!`
+      return `🍽️ *${restaurant.name}*\n\nHola ${reservation.customer_name}! Et recordem la teva reserva de demà.\n\n📅 ${formattedDate}\n🕐 ${reservation.time}h\n👥 ${paxText}\n\nT'esperem!`
     case 'cancellation':
       return `🍽️ *${restaurant.name}*\n\nHola ${reservation.customer_name}. La teva reserva del ${formattedDate} a les ${reservation.time}h ha estat cancel·lada.\n\nSi vols fer una nova reserva, pots contactar-nos.`
   }

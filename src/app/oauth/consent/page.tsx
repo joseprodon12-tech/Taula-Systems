@@ -27,15 +27,15 @@ export default async function ConsentPage({
           Connectar {data.client.name}
         </h1>
         <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
-          {data.client.name} vol consultar les dades de <strong style={{ color: 'var(--text)' }}>{restaurant.name}</strong>:
+          {data.client.name} vol accedir a <strong style={{ color: 'var(--text)' }}>{restaurant.name}</strong> en nom teu i podrà:
         </p>
         <ul style={{ listStyle: 'disc', paddingLeft: 20, marginBottom: 16, lineHeight: 1.8 }}>
-          <li>Reserves de cada dia</li>
-          <li>Disponibilitat i horaris</li>
-          <li>Torns de l&apos;equip</li>
+          <li>Consultar, crear, modificar i cancel·lar reserves</li>
+          <li>Gestionar l&apos;equip, els torns i les absències</li>
+          <li>Canviar la configuració del restaurant</li>
         </ul>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24 }}>
-          Només podrà llegir: no pot crear, modificar ni cancel·lar res. Sessió iniciada com a {data.user.email}.
+          Tindrà els mateixos permisos que tu al panell. Sessió iniciada com a {data.user.email}.
         </p>
         <form action={decideAuthorization} style={{ display: 'flex', gap: 12 }}>
           <input type="hidden" name="authorization_id" value={authorizationId} />
