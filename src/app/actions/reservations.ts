@@ -90,6 +90,78 @@ export async function getAvailableSlotsForDate(date: string): Promise<string[]> 
   return getAvailableSlots(restaurant.weekly_hours, date)
 }
 
+type Auth = Awaited<ReturnType<typeof getAuthRestaurant>>
+type SaveError = { error: string; fieldErrors?: Record<string, string> }
+
+async function isClosedDay({ supabase, restaurant }: Auth, date: string): Promise<boolean> {
+  const { data: closure } = await supabase
+    .from('closures')
+    .select('id')
+    .eq('restaurant_id', restaurant.id)
+    .eq('date', date)
+    .maybeSingle()
+  return !!closure || getAvailableSlots(restaurant.weekly_hours, date).length === 0
+}
+
+// La zona la mana la taula: si no coincideixen, el detall diu Terrassa i la graella la pinta a Sala
+async function resolveTableSection(
+  { supabase, restaurant }: Auth,
+  tableNumber: string,
+  section: 'indoor' | 'outdoor',
+): Promise<{ section: 'indoor' | 'outdoor' } | SaveError> {
+  const { data: tables, error } = await supabase
+    .from('tables')
+    .select('number, section')
+    .eq('restaurant_id', restaurant.id)
+  if (error) return { error: 'Error en comprovar la taula' }
+  // Sense taules configurades, el número de taula és text lliure
+  if (tables.length === 0) return { section }
+
+  const sameNumber = (tables as { number: string; section: 'indoor' | 'outdoor' }[])
+    .filter(t => t.number === tableNumber)
+  if (sameNumber.length === 0) {
+    const message = `La taula ${tableNumber} no existeix. Tria una taula de la llista.`
+    return { error: message, fieldErrors: { table_number: message } }
+  }
+  const matches = sameNumber.length === 1 ? sameNumber : sameNumber.filter(t => t.section === section)
+  if (matches.length !== 1) {
+    const message = `Hi ha més d'una taula amb el número ${tableNumber}. Canvia'n el número a Configuració.`
+    return { error: message, fieldErrors: { table_number: message } }
+  }
+  return { section: matches[0].section }
+}
+
+async function findTableConflict(
+  { supabase, restaurant }: Auth,
+  r: { date: string; time: string; duration: number; tableNumber: string; excludeId?: string },
+): Promise<SaveError | null> {
+  let query = supabase
+    .from('reservations')
+    .select('time, duration_minutes')
+    .eq('restaurant_id', restaurant.id)
+    .eq('date', r.date)
+    .eq('table_number', r.tableNumber)
+    .in('status', ['pending', 'arrived', 'standby'])
+  if (r.excludeId) query = query.neq('id', r.excludeId)
+  const { data, error } = await query
+  if (error) return { error: 'Error en comprovar si la taula és lliure' }
+
+  const [h, m] = r.time.split(':').map(Number)
+  const start = h * 60 + m
+  const end = start + r.duration
+  for (const c of data as { time: string; duration_minutes: number }[]) {
+    const [ch, cm] = c.time.split(':').map(Number)
+    const cStart = ch * 60 + cm
+    const cEnd = cStart + (c.duration_minutes || 90)
+    if (start < cEnd && end > cStart) {
+      const until = `${String(Math.floor(cEnd / 60)).padStart(2, '0')}:${String(cEnd % 60).padStart(2, '0')}`
+      const message = `La taula ${r.tableNumber} està ocupada de ${c.time} a ${until}. Tria una altra taula o canvia l'hora.`
+      return { error: message, fieldErrors: { table_number: message } }
+    }
+  }
+  return null
+}
+
 export async function createReservation(data: {
   date: string
   time: string
@@ -101,23 +173,18 @@ export async function createReservation(data: {
   notes?: string
   table_number?: string
   duration_minutes?: number
-}): Promise<{ id: string; warning?: string } | { error: string; fieldErrors?: Record<string, string> }> {
+}): Promise<{ id: string; warning?: string } | SaveError> {
   const fieldErrors: Record<string, string> = {}
   if (!data.customer_name.trim()) fieldErrors.customer_name = 'El nom és obligatori'
   if (!data.date) fieldErrors.date = 'La data és obligatòria'
   if (!data.time) fieldErrors.time = "L'hora és obligatòria"
   if (Object.keys(fieldErrors).length) return { error: 'Comprova els camps obligatoris', fieldErrors }
 
-  const { supabase, restaurant } = await getAuthRestaurant()
+  const auth = await getAuthRestaurant()
+  const { supabase, restaurant } = auth
 
   // El formulari ja ho impedeix, però el connector MCP no hi passa: la regla viu aquí
-  const { data: closure } = await supabase
-    .from('closures')
-    .select('id')
-    .eq('restaurant_id', restaurant.id)
-    .eq('date', data.date)
-    .maybeSingle()
-  if (closure || getAvailableSlots(restaurant.weekly_hours, data.date).length === 0) {
+  if (await isClosedDay(auth, data.date)) {
     return { error: 'El restaurant és tancat aquest dia', fieldErrors: { date: 'Dia tancat' } }
   }
 
@@ -126,30 +193,14 @@ export async function createReservation(data: {
   const duration = data.duration_minutes
     ?? (isLunch ? restaurant.default_duration_lunch_min : restaurant.default_duration_dinner_min)
 
-  if (data.table_number) {
-    const { data: tableConflicts } = await supabase
-      .from('reservations')
-      .select('time, duration_minutes')
-      .eq('restaurant_id', restaurant.id)
-      .eq('date', data.date)
-      .eq('table_number', data.table_number)
-      .in('status', ['pending', 'arrived', 'standby'])
-
-    if (tableConflicts && tableConflicts.length > 0) {
-      const [rh, rm] = data.time.split(':').map(Number)
-      const rStart = rh * 60 + rm
-      const rEnd = rStart + duration
-      const hasConflict = tableConflicts.some((c: { time: string; duration_minutes: number }) => {
-        const [ch, cm] = c.time.split(':').map(Number)
-        const cStart = ch * 60 + cm
-        const cEnd = cStart + (c.duration_minutes || 90)
-        return rStart < cEnd && rEnd > cStart
-      })
-      if (hasConflict) return {
-        error: `La taula ${data.table_number} ja té una reserva en aquest horari`,
-        fieldErrors: { table_number: 'Taula ocupada en aquest interval' },
-      }
-    }
+  const tableNumber = data.table_number?.trim() || null
+  let section = data.section
+  if (tableNumber) {
+    const resolved = await resolveTableSection(auth, tableNumber, data.section)
+    if ('error' in resolved) return resolved
+    section = resolved.section
+    const conflict = await findTableConflict(auth, { date: data.date, time: data.time, duration, tableNumber })
+    if (conflict) return conflict
   }
 
   const { data: occupied } = await supabase
@@ -157,13 +208,13 @@ export async function createReservation(data: {
     .select('party_size')
     .eq('restaurant_id', restaurant.id)
     .eq('date', data.date)
-    .eq('section', data.section)
+    .eq('section', section)
     .in('status', ['pending', 'arrived'])
 
   const occupiedPax = (occupied || []).reduce((s: number, r: { party_size: number }) => s + r.party_size, 0)
-  const capacity = data.section === 'indoor' ? restaurant.capacity_indoor : restaurant.capacity_outdoor
+  const capacity = section === 'indoor' ? restaurant.capacity_indoor : restaurant.capacity_outdoor
   const total = occupiedPax + data.party_size
-  const sectionLabel = data.section === 'indoor' ? 'El menjador' : 'La terrassa'
+  const sectionLabel = section === 'indoor' ? 'El menjador' : 'La terrassa'
   const warning = capacity > 0 && total > capacity
     ? `⚠️ ${sectionLabel} té ${occupiedPax}/${capacity} places ocupades — reserva guardada igualment`
     : undefined
@@ -173,13 +224,13 @@ export async function createReservation(data: {
     date: data.date,
     time: data.time,
     party_size: data.party_size,
-    section: data.section,
+    section,
     duration_minutes: duration,
     customer_name: data.customer_name.trim(),
     customer_phone: data.customer_phone.trim(),
     customer_email: data.customer_email?.trim() || null,
     notes: data.notes?.trim() || null,
-    table_number: data.table_number?.trim() || null,
+    table_number: tableNumber,
     status: 'pending',
     source: 'manual',
     allergies: [],
@@ -206,23 +257,53 @@ export async function updateReservation(
     table_number?: string
     duration_minutes?: number
   },
-): Promise<{ ok: true } | { error: string }> {
+): Promise<{ ok: true } | SaveError> {
   if (!data.customer_name.trim() || !data.date || !data.time) {
     return { error: 'Comprova els camps obligatoris' }
   }
 
-  const { supabase, restaurant } = await getAuthRestaurant()
+  const auth = await getAuthRestaurant()
+  const { supabase, restaurant } = auth
+
+  const { data: current } = await supabase
+    .from('reservations')
+    .select('date, time, duration_minutes, section, table_number')
+    .eq('id', id)
+    .eq('restaurant_id', restaurant.id)
+    .maybeSingle()
+  if (!current) return { error: 'Reserva no trobada' }
+
+  // Si el dia s'ha tancat després de reservar, s'ha de poder seguir editant el telèfon o les notes
+  if (data.date !== current.date && await isClosedDay(auth, data.date)) {
+    return { error: 'El restaurant és tancat aquest dia', fieldErrors: { date: 'Dia tancat' } }
+  }
+
+  const duration = data.duration_minutes ?? current.duration_minutes
+  const tableNumber = data.table_number?.trim() || null
+  let section = data.section
+  // Només es valida si canvia on o quan seu el client: un solapament antic no ha de bloquejar editar les notes
+  const changesSeat = data.date !== current.date || data.time !== current.time
+    || duration !== current.duration_minutes || tableNumber !== current.table_number
+    || data.section !== current.section
+  if (tableNumber && changesSeat) {
+    const resolved = await resolveTableSection(auth, tableNumber, data.section)
+    if ('error' in resolved) return resolved
+    section = resolved.section
+    const conflict = await findTableConflict(auth, { date: data.date, time: data.time, duration, tableNumber, excludeId: id })
+    if (conflict) return conflict
+  }
+
   const { error } = await supabase.from('reservations').update({
     date: data.date,
     time: data.time,
     party_size: data.party_size,
-    section: data.section,
-    duration_minutes: data.duration_minutes,
+    section,
+    duration_minutes: duration,
     customer_name: data.customer_name.trim(),
     customer_phone: data.customer_phone.trim(),
     customer_email: data.customer_email?.trim() || null,
     notes: data.notes?.trim() || null,
-    table_number: data.table_number?.trim() || null,
+    table_number: tableNumber,
     updated_at: new Date().toISOString(),
   })
     .eq('id', id)

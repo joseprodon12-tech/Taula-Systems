@@ -90,6 +90,22 @@ export default function ReservationCard({ reservation: r }: Props) {
         </div>
       )}
 
+      {r.allergies.length > 0 && (
+        <p className="text-xs mb-1" style={{ color: 'var(--warning)' }}>
+          <strong>{t('reserva.camps.alergies')}:</strong>{' '}
+          {r.allergies.map(a => {
+            const key = `reserva.alergies.${a}` as Parameters<typeof t>[0]
+            const label = t(key)
+            return label === key ? a : label
+          }).join(', ')}
+        </p>
+      )}
+      {r.special_occasion && (
+        <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+          <strong>{t('reserva.camps.ocasio')}:</strong> {r.special_occasion}
+        </p>
+      )}
+
       {/* Action buttons */}
       {isActionable && (
         <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>

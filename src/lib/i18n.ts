@@ -43,6 +43,21 @@ const ca = {
       opcional:         '(opcional)',
       notesPlaceholder: "Al·lèrgies, preferències de taula...",
       taulaPlaceholder: 'Ex: T-3, Barra, Terrassa 2',
+      alergies:         'Al·lèrgies',
+      ocasio:           'Ocasió especial',
+    },
+    alergies: {
+      gluten:      'Gluten',
+      lactosa:     'Lactosa',
+      fruits_secs: 'Fruits secs',
+      marisc:      'Marisc',
+      ou:          'Ou',
+      vegetaria:   'Vegetarià',
+      vega:        'Vegà',
+    },
+    horaDesada: {
+      foraHorari: "Hora desada fora de l'horari actual. Es mantindrà si no en tries una altra.",
+      triarAltra: 'Tria una altra hora',
     },
     estats: {
       pending:   'Pendent',
@@ -321,6 +336,21 @@ const es: DeepString<typeof ca> = {
       opcional:         '(opcional)',
       notesPlaceholder: 'Alergias, preferencias de mesa...',
       taulaPlaceholder: 'Ej: M-3, Barra, Terraza 2',
+      alergies:         'Alergias',
+      ocasio:           'Ocasión especial',
+    },
+    alergies: {
+      gluten:      'Gluten',
+      lactosa:     'Lactosa',
+      fruits_secs: 'Frutos secos',
+      marisc:      'Marisco',
+      ou:          'Huevo',
+      vegetaria:   'Vegetariano',
+      vega:        'Vegano',
+    },
+    horaDesada: {
+      foraHorari: 'Hora guardada fuera del horario actual. Se mantendrá si no eliges otra.',
+      triarAltra: 'Elige otra hora',
     },
     estats: {
       pending:   'Pendiente',

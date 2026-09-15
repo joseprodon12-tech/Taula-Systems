@@ -183,6 +183,29 @@ export default function ReservaDetallClient({ reservation, tables, customerHisto
         <Row label={t('reserva.camps.data')} value={formatDate(reservation.date, locale === 'ca' ? 'ca' : 'es')} />
         <div className="divider" />
         <Row label={t('reserva.camps.seccio')} value={sectionLabel} />
+        {reservation.allergies.length > 0 && (
+          <>
+            <div className="divider" />
+            <Row
+              label={t('reserva.camps.alergies')}
+              value={
+                <strong style={{ color: 'var(--warning)' }}>
+                  {reservation.allergies.map(a => {
+                    const key = `reserva.alergies.${a}` as Parameters<typeof t>[0]
+                    const label = t(key)
+                    return label === key ? a : label
+                  }).join(', ')}
+                </strong>
+              }
+            />
+          </>
+        )}
+        {reservation.special_occasion && (
+          <>
+            <div className="divider" />
+            <Row label={t('reserva.camps.ocasio')} value={reservation.special_occasion} />
+          </>
+        )}
         {reservation.notes && (
           <>
             <div className="divider" />

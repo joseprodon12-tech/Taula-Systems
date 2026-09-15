@@ -216,6 +216,9 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
                   >
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', width: 40, flexShrink: 0 }}>{r.time}</span>
                     <span style={{ fontSize: 13, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.customer_name}</span>
+                    {r.allergies.length > 0 && (
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning)', flexShrink: 0 }}>{t('reserva.camps.alergies')}</span>
+                    )}
                     <span style={{ fontSize: 13, color: 'var(--text-muted)', flexShrink: 0 }}>×{r.party_size}</span>
                     {r.table_number && <span style={{ fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 }}>{r.table_number}</span>}
                   </div>

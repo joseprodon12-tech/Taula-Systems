@@ -13,6 +13,7 @@ import type { Restaurant, Reservation, Table } from '@/db/schema'
 interface Props {
   initialDate: string
   initialSlots: string[]
+  initialDayReservations: Reservation[]
   initialTime: string
   initialTableId: string
   restaurant: Restaurant
@@ -39,7 +40,7 @@ function defaultDuration(restaurant: Restaurant, time: string): number {
     : restaurant.default_duration_dinner_min
 }
 
-export default function NovaReservaClient({ initialDate, initialSlots, initialTime, initialTableId, restaurant, editReservation, tables }: Props) {
+export default function NovaReservaClient({ initialDate, initialSlots, initialDayReservations, initialTime, initialTableId, restaurant, editReservation, tables }: Props) {
   const router = useRouter()
   const { t } = useT()
   const { toast, show, hide } = useToast()
@@ -50,6 +51,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
   const [slots, setSlots] = useState<string[]>(initialSlots)
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [time, setTime] = useState(edit?.time ?? initialTime)
+  const [changingTime, setChangingTime] = useState(false)
   const [durationMinutes, setDurationMinutes] = useState(() => {
     if (edit?.duration_minutes) return edit.duration_minutes
     const t = edit?.time ?? initialTime
@@ -57,7 +59,6 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
   })
   const [partySize, setPartySize] = useState(edit?.party_size ?? 2)
   const [showStepper, setShowStepper] = useState((edit?.party_size ?? 2) > 6)
-  const [section, setSection] = useState<'indoor' | 'outdoor'>(edit?.section ?? 'indoor')
   const [name, setName] = useState(edit?.customer_name ?? '')
   const [phone, setPhone] = useState(edit?.customer_phone ?? '')
   const [email, setEmail] = useState(edit?.customer_email ?? '')
@@ -72,11 +73,13 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           ?? ''
     return initialTableId
   })
+  // La zona surt de la taula: així no es pot desar Terrassa amb una taula de Sala
+  const [section, setSection] = useState<'indoor' | 'outdoor'>(
+    () => tables.find(t => t.id === tableId)?.section ?? edit?.section ?? 'indoor'
+  )
   // Free-text table number when no tables are configured
   const [tableText, setTableText] = useState(tables.length === 0 ? (edit?.table_number ?? '') : '')
-  const [dayReservations, setDayReservations] = useState<
-    { table_number: string | null; time: string; duration_minutes: number; id: string }[]
-  >([])
+  const [dayReservations, setDayReservations] = useState<Reservation[]>(initialDayReservations)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [customerHistory, setCustomerHistory] = useState<{ visits: number; lastDate: string; recentNote: string | null } | null>(null)
 
@@ -88,9 +91,14 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
     setCustomerHistory(h)
   }
 
+  function clearTableError() {
+    if (errors.table_number) setErrors(e => ({ ...e, table_number: '' }))
+  }
+
   function handleDateChange(newDate: string) {
     setDate(newDate)
     setTime('')
+    clearTableError()
     setSlotsLoading(true)
     startTransition(async () => {
       const [newSlots, dayRes] = await Promise.all([
@@ -98,12 +106,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         getReservationsForDay(newDate),
       ])
       setSlots(newSlots)
-      setDayReservations(dayRes.map(r => ({
-        table_number: r.table_number,
-        time: r.time,
-        duration_minutes: r.duration_minutes,
-        id: r.id,
-      })))
+      setDayReservations(dayRes)
       setSlotsLoading(false)
     })
   }
@@ -111,6 +114,25 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
   function handleTimeSelect(selectedTime: string) {
     setTime(selectedTime)
     setDurationMinutes(defaultDuration(restaurant, selectedTime))
+    clearTableError()
+  }
+
+  function changeDuration(delta: number) {
+    setDurationMinutes(d => Math.min(240, Math.max(30, d + delta)))
+    clearTableError()
+  }
+
+  function handleSectionChange(newSection: 'indoor' | 'outdoor') {
+    setSection(newSection)
+    if (tables.find(t => t.id === tableId)?.section !== newSection) setTableId('')
+    clearTableError()
+  }
+
+  function handleTableSelect(table: Table) {
+    clearTableError()
+    if (tableId === table.id) { setTableId(''); return }
+    setTableId(table.id)
+    setSection(table.section)
   }
 
   function handleSubmit(e: { preventDefault(): void }) {
@@ -132,16 +154,16 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         duration_minutes: durationMinutes,
       }
 
-      let result
       if (edit) {
-        result = await updateReservation(edit.id, data)
+        const result = await updateReservation(edit.id, data)
         if ('error' in result) {
+          setErrors(result.fieldErrors ?? {})
           show(result.error, 'error')
           return
         }
         router.push(`/reserva/${edit.id}`)
       } else {
-        result = await createReservation(data)
+        const result = await createReservation(data)
         if ('error' in result) {
           setErrors(result.fieldErrors ?? {})
           show(result.error, 'error')
@@ -163,6 +185,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         .filter(r => {
           if (edit && r.id === edit.id) return false
           if (!r.table_number) return false
+          if (r.status !== 'pending' && r.status !== 'arrived' && r.status !== 'standby') return false
           const [oh, om] = r.time.split(':').map(Number)
           const oStart = oh * 60 + om
           const oEnd = oStart + (r.duration_minutes || 90)
@@ -176,6 +199,8 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
   const lunchSlots = slots.filter(s => parseInt(s) < 17)
   const dinnerSlots = slots.filter(s => parseInt(s) >= 17)
   const closed = !slotsLoading && slots.length === 0
+  // Una hora desada que ja no és a l'horari es conserva, però no s'ofereix com a franja disponible
+  const keepsOldTime = !!edit && !changingTime && date === edit.date && time === edit.time && !slots.includes(edit.time)
   const endTime = time ? addMinutesToTime(time, durationMinutes) : null
 
   return (
@@ -224,6 +249,23 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
           <span className="label">{t('reserva.camps.hora')}</span>
           {slotsLoading ? (
             <p className="text-sm" style={{ color: 'var(--text-muted)', marginTop: 8 }}>{t('common.carregant')}</p>
+          ) : keepsOldTime ? (
+            <div className="reservation-closed" role="status" style={{ borderLeftColor: 'var(--warning)' }}>
+              <p>
+                <strong style={{ fontSize: 18, color: 'var(--text)' }}>{time}</strong>
+                {' · '}{t('reserva.horaDesada.foraHorari')}
+              </p>
+              {slots.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  style={{ marginTop: 8, minHeight: 44 }}
+                  onClick={() => setChangingTime(true)}
+                >
+                  {t('reserva.horaDesada.triarAltra')}
+                </button>
+              )}
+            </div>
           ) : closed ? (
             <p className="reservation-closed">
               {t('reserva.missatges.tancat')}
@@ -255,7 +297,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                 type="button"
                 className="btn btn-ghost btn-sm"
                 style={{ minWidth: 44, minHeight: 44 }}
-                onClick={() => setDurationMinutes(d => Math.max(30, d - 15))}
+                onClick={() => changeDuration(-15)}
               >
                 −15 min
               </button>
@@ -266,7 +308,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                 type="button"
                 className="btn btn-ghost btn-sm"
                 style={{ minWidth: 44, minHeight: 44 }}
-                onClick={() => setDurationMinutes(d => Math.min(240, d + 15))}
+                onClick={() => changeDuration(15)}
               >
                 +15 min
               </button>
@@ -341,7 +383,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                   className={`btn btn-sm ${section === 'indoor' ? 'btn-primary' : 'btn-ghost'}`}
                   style={{ minHeight: 44 }}
                   aria-pressed={section === 'indoor'}
-                  onClick={() => setSection('indoor')}
+                  onClick={() => handleSectionChange('indoor')}
                 >
                   {t('reserva.seccions.interior')}
                 </button>
@@ -350,7 +392,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                   className={`btn btn-sm ${section === 'outdoor' ? 'btn-primary' : 'btn-ghost'}`}
                   style={{ minHeight: 44 }}
                   aria-pressed={section === 'outdoor'}
-                  onClick={() => setSection('outdoor')}
+                  onClick={() => handleSectionChange('outdoor')}
                 >
                   {t('reserva.seccions.terrassa')}
                 </button>
@@ -444,7 +486,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
               className="input"
               placeholder="Ex: T-3, Barra, Terrassa 2"
               value={tableText}
-              onChange={e => setTableText(e.target.value)}
+              onChange={e => { setTableText(e.target.value); clearTableError() }}
             />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -466,7 +508,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                             type="button"
                             className={`btn reservation-table-option ${isSelected ? 'btn-primary' : 'btn-ghost'}`}
                             aria-pressed={isSelected}
-                            onClick={() => setTableId(id => id === table.id ? '' : table.id)}
+                            onClick={() => handleTableSelect(table)}
                             style={{ opacity: isOccupied && !isSelected ? 0.4 : 1, position: 'relative' }}
                           >
                             {table.number}
@@ -499,6 +541,12 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
             </p>
           )}
 
+          {errors.table_number && (
+            <p role="alert" className="text-sm mt-2" style={{ color: 'var(--state-noshow)', fontWeight: 600 }}>
+              {errors.table_number}
+            </p>
+          )}
+
           {/* Capacity warning */}
           {(() => {
             const sel = tables.find(tb => tb.id === tableId)
@@ -516,7 +564,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                       <button
                         key={tb.id}
                         type="button"
-                        onClick={() => setTableId(tb.id)}
+                        onClick={() => handleTableSelect(tb)}
                         style={{
                           fontSize: 12, padding: '2px 10px', minHeight: 28, borderRadius: 6, cursor: 'pointer',
                           background: tableId === tb.id ? 'var(--primary)' : '#FFEDD5',
@@ -524,7 +572,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
                           border: '1px solid #FED7AA',
                         }}
                       >
-                        {tb.number} ({tb.capacity}p)
+                        {tb.number} · {tb.section === 'indoor' ? t('reserva.seccions.interior') : t('reserva.seccions.terrassa')} ({tb.capacity}p)
                       </button>
                     ))}
                   </div>
@@ -556,7 +604,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialTi
         <button
           type="submit"
           className="btn btn-primary btn-lg reservation-submit"
-          disabled={pending || (!edit && closed)}
+          disabled={pending || (closed && !keepsOldTime)}
         >
           {pending ? 'Guardant...' : t('reserva.guardar')}
         </button>
