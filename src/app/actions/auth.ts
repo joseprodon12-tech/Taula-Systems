@@ -1,5 +1,6 @@
 'use server'
 
+import { redirect } from 'next/navigation'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 
@@ -25,4 +26,14 @@ export async function signIn(identifier: string, password: string): Promise<{ er
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithPassword({ email, password })
   if (error) return { error: 'Credencials incorrectes.' }
+}
+
+export async function decideAuthorization(formData: FormData) {
+  const authorizationId = String(formData.get('authorization_id'))
+  const supabase = await createClient()
+  const { data, error } = formData.get('decision') === 'approve'
+    ? await supabase.auth.oauth.approveAuthorization(authorizationId)
+    : await supabase.auth.oauth.denyAuthorization(authorizationId)
+  if (error) throw error
+  redirect(data.redirect_url)
 }

@@ -22,7 +22,9 @@ export default function LoginPage() {
       setError(result.error)
       setLoading(false)
     } else {
-      router.push('/avui')
+      // Només rutes internes: evita que ?redirect= enviï l'usuari a un altre domini
+      const next = new URLSearchParams(window.location.search).get('redirect')
+      router.push(next?.startsWith('/') && !next.startsWith('//') ? next : '/avui')
     }
   }
 

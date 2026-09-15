@@ -35,11 +35,15 @@ export async function proxy(request: NextRequest) {
     // El cron de Vercel no porta sessió: s'autentica amb CRON_SECRET a la ruta
     request.nextUrl.pathname.startsWith('/api/cron/') ||
     // Els clients MCP no porten cookie: s'autentiquen amb MCP_TOKENS a la ruta
-    request.nextUrl.pathname.startsWith('/api/mcp')
+    request.nextUrl.pathname.startsWith('/api/mcp') ||
+    // Descobriment OAuth per a clients MCP
+    request.nextUrl.pathname.startsWith('/.well-known/')
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    // Després del login es torna aquí (necessari per a /oauth/consent?authorization_id=…)
+    url.search = `?redirect=${encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)}`
     return NextResponse.redirect(url)
   }
 

@@ -1,12 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { getAvailableSlots } from '@/lib/schedule'
 import type { WeeklyHours } from '@/db/schema'
 
-// Connector MCP de només lectura. Cada petició porta un token que determina
-// el restaurant: mai s'accepta un restaurant_id que vingui del client.
+// Connector MCP de només lectura. El restaurant es deriva sempre de la
+// credencial (clau fixa o sessió OAuth): mai d'un restaurant_id del client.
 
 export const dynamic = 'force-dynamic'
 
@@ -23,26 +23,33 @@ function todayMadrid(): string {
   }).format(new Date())
 }
 
-function restaurantForToken(request: Request): string | null {
+async function restaurantForRequest(request: Request, supabase: SupabaseClient): Promise<string | null> {
   const token = request.headers.get('authorization')?.replace(/^Bearer /, '')
   if (!token) return null
+
   for (const pair of (process.env.MCP_TOKENS ?? '').split(',')) {
     const [t, restaurantId] = pair.trim().split(':')
     if (t && restaurantId && t === token) return restaurantId
   }
-  return null
+
+  // Token OAuth emès per Supabase Auth quan un usuari del panell autoritza el client
+  // getClaims llança amb un token mal format: el tractem com a no autoritzat
+  const { data } = await supabase.auth.getClaims(token).catch(() => ({ data: null }))
+  if (!data) return null
+  const { data: member } = await supabase
+    .from('restaurant_members')
+    .select('restaurant_id')
+    .eq('user_id', data.claims.sub)
+    .maybeSingle()
+  return member?.restaurant_id ?? null
 }
 
 function json(data: unknown) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] }
 }
 
-function buildServer(restaurantId: string) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-  const server = new McpServer({ name: 'taula-systems', version: '0.1.0' })
+function buildServer(supabase: SupabaseClient, restaurantId: string) {
+  const server = new McpServer({ name: 'taula-systems', version: '0.2.0' })
 
   server.registerTool('reserves_del_dia', {
     title: 'Reserves del dia',
@@ -121,16 +128,26 @@ function buildServer(restaurantId: string) {
 }
 
 async function handle(request: Request) {
-  const restaurantId = restaurantForToken(request)
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  )
+  const restaurantId = await restaurantForRequest(request, supabase)
   if (!restaurantId) {
-    return Response.json({ error: 'No autoritzat' }, { status: 401 })
+    // RFC 9728: indica al client MCP on descobrir com autenticar-se
+    const metadata = `${new URL(request.url).origin}/.well-known/oauth-protected-resource`
+    return Response.json(
+      { error: 'No autoritzat' },
+      { status: 401, headers: { 'WWW-Authenticate': `Bearer resource_metadata="${metadata}"` } }
+    )
   }
   // Sense sessions: cada petició és independent, que és el que encaixa amb serverless
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
   })
-  await buildServer(restaurantId).connect(transport)
+  await buildServer(supabase, restaurantId).connect(transport)
   return transport.handleRequest(request)
 }
 
