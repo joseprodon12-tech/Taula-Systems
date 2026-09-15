@@ -14,7 +14,7 @@ export default async function ReservaDetallPage({ params }: Props) {
 
   const [tables, customerHistory] = await Promise.all([
     getTables(),
-    getCustomerHistory(reservation.customer_phone),
+    getCustomerHistory(reservation.customer_phone, reservation.date),
   ])
 
   return <ReservaDetallClient reservation={reservation} tables={tables} customerHistory={customerHistory} />

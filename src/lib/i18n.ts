@@ -8,10 +8,12 @@ const ca = {
     equip:  'Equip',
     config: 'Configuració',
     nova:   'Nova reserva',
+    tancarSessio: 'Tancar sessió',
   },
   common: {
     avui:      'Avui',
     carregant: 'Carregant...',
+    cancellar: 'Cancel·lar',
   },
   reserva: {
     nova:       'Nova reserva',
@@ -119,9 +121,9 @@ const ca = {
     properes:       'Properes reserves',
     agendaCompleta: 'Agenda completa →',
     equip: {
-      titular:    'persones treballen avui',
-      titular1:   'persona treballa avui',
-      senseTorns: 'No hi ha horaris planificats per avui',
+      titular:    'persones treballen',
+      titular1:   'persona treballa',
+      senseTorns: 'No hi ha horaris planificats aquest dia',
       anarEquip:  '→ Equip',
     },
     avisos: {
@@ -158,6 +160,7 @@ const ca = {
     publicar:         'Publicar setmana',
     publicats:        'horaris publicats',
     esborranys:       'esborranys',
+    esborrany1:       'esborrany',
     eliminarSetmana:          'Eliminar torns setmana',
     eliminarDia:              'Eliminar torns dia',
     confirmarEliminarSetmana: 'Eliminar tots els torns d\'aquesta setmana? Aquesta acció no es pot desfer.',
@@ -182,6 +185,8 @@ const ca = {
       desactivar:        'Desactivar',
       reactivar:         'Reactivar',
       confirmDesactivar: "Segur que vols desactivar aquest empleat? Deixarà d'aparèixer als nous horaris.",
+      desat:             'Empleat desat',
+      mantenir:          "Mantén l'empleat actiu",
     },
     torn: {
       nou:              'Nou horari',
@@ -196,6 +201,11 @@ const ca = {
       solapat:          'Aquest empleat ja té un horari en aquest interval',
       esborrany:        'Esborrany',
       afegirTram:       'Afegir tram',
+      dia:              'Dia',
+      durada:           'Durada',
+      acabaEndema:      "acaba l'endemà",
+      iguals:           "L'inici i el final no poden ser iguals",
+      confirmarEliminar: 'Segur que vols eliminar aquest torn?',
     },
     avisos: {
       descans12h:     'Menys de 12 h de descans entre jornades',
@@ -229,6 +239,8 @@ const ca = {
   },
   config: {
     titol:  'Configuració',
+    errorGuardar: 'Error en guardar',
+    sessio: 'Sessió',
     organitzacio: {
       afegirTancat: 'Afegir dia tancat',
     },
@@ -248,6 +260,10 @@ const ca = {
       telefon: 'Telèfon',
       adreca:  'Adreça',
       url:     'URL formulari',
+      guardar: 'Guardar informació',
+      obrir:   'Obre el formulari',
+      copiar:  "Copia l'enllaç",
+      copiat:  'Enllaç copiat',
     },
     horaris: {
       obertDia: 'Obert aquest dia',
@@ -257,6 +273,15 @@ const ca = {
     },
     tancats: {
       motiu: 'Motiu (opcional)',
+      afegit:          'Dia tancat afegit',
+      errorAfegir:     'Error en afegir el dia tancat',
+      errorEliminar:   'Error en eliminar',
+      reservesPre:     'Aquest dia hi ha',
+      reserves1:       'reserva activa',
+      reservesN:       'reserves actives',
+      reservesPost:    "No es cancel·laran: avisa els clients i revisa-les a l'Agenda.",
+      veure:           'Veure reserves',
+      tancarIgualment: 'Tancar igualment',
     },
     durades: {
       titol:      'Durada de les reserves',
@@ -301,10 +326,12 @@ const es: DeepString<typeof ca> = {
     equip:  'Equipo',
     config: 'Configuración',
     nova:   'Nueva reserva',
+    tancarSessio: 'Cerrar sesión',
   },
   common: {
     avui:      'Hoy',
     carregant: 'Cargando...',
+    cancellar: 'Cancelar',
   },
   reserva: {
     nova:       'Nueva reserva',
@@ -412,9 +439,9 @@ const es: DeepString<typeof ca> = {
     properes:       'Próximas reservas',
     agendaCompleta: 'Agenda completa →',
     equip: {
-      titular:    'personas trabajan hoy',
-      titular1:   'persona trabaja hoy',
-      senseTorns: 'No hay horarios planificados para hoy',
+      titular:    'personas trabajan',
+      titular1:   'persona trabaja',
+      senseTorns: 'No hay horarios planificados este día',
       anarEquip:  '→ Equipo',
     },
     avisos: {
@@ -451,6 +478,7 @@ const es: DeepString<typeof ca> = {
     publicar:         'Publicar semana',
     publicats:        'horarios publicados',
     esborranys:       'borradores',
+    esborrany1:       'borrador',
     eliminarSetmana:          'Eliminar turnos semana',
     eliminarDia:              'Eliminar turnos día',
     confirmarEliminarSetmana: 'Eliminar todos los turnos de esta semana? Esta acción no se puede deshacer.',
@@ -475,6 +503,8 @@ const es: DeepString<typeof ca> = {
       desactivar:        'Desactivar',
       reactivar:         'Reactivar',
       confirmDesactivar: '¿Seguro que quieres desactivar este empleado? Dejará de aparecer en los nuevos horarios.',
+      desat:             'Empleado guardado',
+      mantenir:          'Mantener activo',
     },
     torn: {
       nou:              'Nuevo horario',
@@ -489,6 +519,11 @@ const es: DeepString<typeof ca> = {
       solapat:          'Este empleado ya tiene un horario en este intervalo',
       esborrany:        'Borrador',
       afegirTram:       'Añadir tramo',
+      dia:              'Día',
+      durada:           'Duración',
+      acabaEndema:      'termina al día siguiente',
+      iguals:           'El inicio y el final no pueden ser iguales',
+      confirmarEliminar: '¿Seguro que quieres eliminar este turno?',
     },
     avisos: {
       descans12h:     'Menos de 12 h de descanso entre jornadas',
@@ -522,6 +557,8 @@ const es: DeepString<typeof ca> = {
   },
   config: {
     titol:  'Configuración',
+    errorGuardar: 'Error al guardar',
+    sessio: 'Sesión',
     organitzacio: {
       afegirTancat: 'Añadir día de cierre',
     },
@@ -541,6 +578,10 @@ const es: DeepString<typeof ca> = {
       telefon: 'Teléfono',
       adreca:  'Dirección',
       url:     'URL formulario',
+      guardar: 'Guardar información',
+      obrir:   'Abrir formulario',
+      copiar:  'Copiar enlace',
+      copiat:  'Enlace copiado',
     },
     horaris: {
       obertDia: 'Abierto este día',
@@ -550,6 +591,15 @@ const es: DeepString<typeof ca> = {
     },
     tancats: {
       motiu: 'Motivo (opcional)',
+      afegit:          'Día cerrado añadido',
+      errorAfegir:     'Error al añadir el día cerrado',
+      errorEliminar:   'Error al eliminar',
+      reservesPre:     'Este día hay',
+      reserves1:       'reserva activa',
+      reservesN:       'reservas activas',
+      reservesPost:    'No se cancelarán: avisa a los clientes y revísalas en la Agenda.',
+      veure:           'Ver reservas',
+      tancarIgualment: 'Cerrar igualmente',
     },
     durades: {
       titol:      'Duración de las reservas',

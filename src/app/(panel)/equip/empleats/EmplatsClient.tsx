@@ -150,7 +150,7 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
             : e
         ))
         setShowForm(false)
-        showToast(t('reserva.missatges.guardada'), 'success')
+        showToast(t('equip.empleats.desat'), 'success')
       })
     } else {
       startTransition(async () => {
@@ -177,7 +177,7 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
         setEmployees(prev => [...prev, newEmp])
         setShowForm(false)
         setForm(EMPTY_FORM)
-        showToast(t('reserva.missatges.guardada'), 'success')
+        showToast(t('equip.empleats.desat'), 'success')
       })
     }
   }
@@ -487,7 +487,7 @@ export default function EmplatsClient({ employees: initial, role }: Props) {
                 style={{ flex: 1 }}
                 onClick={() => setConfirmDeactivate(null)}
               >
-                {t('reserva.confirmCancellar.mantenir')}
+                {t('equip.empleats.mantenir')}
               </button>
             </div>
           </div>

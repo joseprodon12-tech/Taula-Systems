@@ -975,7 +975,7 @@ export default function EquipClient({
                     onClick={handlePublish}
                     disabled={isPending}
                   >
-                    {t('equip.publicar')} ({draftCount} {t('equip.esborranys')})
+                    {t('equip.publicar')} ({draftCount} {draftCount === 1 ? t('equip.esborrany1') : t('equip.esborranys')})
                   </button>
                 )}
               </>

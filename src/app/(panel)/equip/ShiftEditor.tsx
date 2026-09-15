@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { X, Trash2, Plus } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
+import { toMin } from '@/lib/labor'
 import type { Shift, Employee, WeeklyHours } from '@/db/schema'
 import EmpAvatar from '@/components/ui/EmpAvatar'
 
@@ -42,6 +43,12 @@ function defaultTimes(date: string, wh: WeeklyHours): { start: string; end: stri
   return { start: svc[0], end: svc[1] }
 }
 
+function formatDay(iso: string, locale: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Intl.DateTimeFormat(locale === 'ca' ? 'ca' : 'es', { weekday: 'long', day: 'numeric', month: 'long' })
+    .format(new Date(y, m - 1, d))
+}
+
 export default function ShiftEditor({
   mode, employeeId, date, shift, employees, roleLabels, weeklyHours,
   fieldErrors, isPending, onSave, onDelete, onAddTram, onClose, isMobile,
@@ -50,10 +57,12 @@ export default function ShiftEditor({
   const defaults = defaultTimes(date, weeklyHours)
 
   const [empId, setEmpId] = useState(shift?.employee_id ?? employeeId)
+  const [shiftDate, setShiftDate] = useState(date)
   const [start, setStart] = useState(shift?.start_time ?? defaults.start)
   const [end, setEnd] = useState(shift?.end_time ?? defaults.end)
   const [zone, setZone] = useState(shift?.zone ?? '')
   const [notes, setNotes] = useState(shift?.notes ?? '')
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   // Punt 6: hores habituals del restaurant per a selecció ràpida
   const suggestedTimes = useMemo(() => {
@@ -74,9 +83,17 @@ export default function ShiftEditor({
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  // Hores iguals no són un torn de 24 h; un final anterior a l'inici sí que és un torn que passa mitjanit
+  const sameTimes = !!start && start === end
+  const overnight = !!start && !!end && toMin(end) < toMin(start)
+  const minutes = start && end && !sameTimes
+    ? (overnight ? toMin(end) + 1440 - toMin(start) : toMin(end) - toMin(start))
+    : null
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    onSave({ employee_id: empId, date, start_time: start, end_time: end, zone, notes })
+    if (sameTimes) return
+    onSave({ employee_id: empId, date: shiftDate, start_time: start, end_time: end, zone, notes })
   }
 
   const emp = employees.find(e => e.id === empId)
@@ -110,6 +127,7 @@ export default function ShiftEditor({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--text)' }}>
             {mode === 'new' ? t('equip.torn.nou') : t('equip.torn.editar')}
+            <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> · {formatDay(shiftDate, locale)}</span>
           </span>
           <button onClick={onClose} aria-label={locale === 'ca' ? 'Tancar' : 'Cerrar'} className="btn btn-ghost btn-sm" style={{ padding: '0 8px', minHeight: 44 }}>
             <X size={16} />
@@ -119,18 +137,32 @@ export default function ShiftEditor({
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {/* Employee selector (only for new shifts — in existing shifts it's already assigned) */}
           {mode === 'new' && (
-            <div>
-              <label className="label">{t('equip.empleats.empleat')}</label>
-              <select
-                className="input"
-                value={empId}
-                onChange={e => setEmpId(e.target.value)}
-                required
-              >
-                {employees.map(e => (
-                  <option key={e.id} value={e.id}>{e.name}</option>
-                ))}
-              </select>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10 }}>
+              <div>
+                <label className="label" htmlFor="shift-employee">{t('equip.empleats.empleat')}</label>
+                <select
+                  id="shift-employee"
+                  className="input"
+                  value={empId}
+                  onChange={e => setEmpId(e.target.value)}
+                  required
+                >
+                  {employees.map(e => (
+                    <option key={e.id} value={e.id}>{e.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label" htmlFor="shift-date">{t('equip.torn.dia')}</label>
+                <input
+                  id="shift-date"
+                  type="date"
+                  className="input"
+                  value={shiftDate}
+                  onChange={e => setShiftDate(e.target.value)}
+                  required
+                />
+              </div>
             </div>
           )}
 
@@ -139,7 +171,6 @@ export default function ShiftEditor({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <EmpAvatar name={emp.name} color={emp.color} avatarUrl={emp.avatar_url} size={22} />
               <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{emp.name}</span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{date}</span>
             </div>
           )}
 
@@ -169,9 +200,29 @@ export default function ShiftEditor({
                 value={end}
                 onChange={e => setEnd(e.target.value)}
                 required
+                style={fieldErrors?.end_time || sameTimes ? { borderColor: 'var(--state-noshow)' } : {}}
               />
+              {fieldErrors?.end_time && !sameTimes && (
+                <span style={{ fontSize: 12, color: 'var(--state-noshow)', marginTop: 4, display: 'block' }}>
+                  {fieldErrors.end_time}
+                </span>
+              )}
             </div>
           </div>
+
+          {sameTimes ? (
+            <p role="alert" style={{ fontSize: 13, fontWeight: 600, color: 'var(--state-noshow)', marginTop: -8 }}>
+              {t('equip.torn.iguals')}
+            </p>
+          ) : minutes !== null && (
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: -8 }}>
+              {t('equip.torn.durada')}:{' '}
+              <strong style={{ color: 'var(--text)' }}>
+                {Math.floor(minutes / 60)} h{minutes % 60 ? ` ${minutes % 60} min` : ''}
+              </strong>
+              {overnight && <> · {t('equip.torn.acabaEndema')}</>}
+            </p>
+          )}
 
           {/* Punt 6: píndoles d'hores habituals del restaurant */}
           {suggestedTimes.length > 0 && (
@@ -238,23 +289,41 @@ export default function ShiftEditor({
           </div>
 
           {/* Actions */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-            <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={isPending}>
-              {t('equip.torn.guardar')}
-            </button>
-            {onDelete && (
-              <button
-                type="button"
-                className="btn btn-danger btn-sm"
-                style={{ minHeight: 40 }}
-                onClick={onDelete}
-                disabled={isPending}
-                title={t('equip.torn.eliminar')}
-              >
-                <Trash2 size={16} />
+          {confirmDelete ? (
+            <div role="alert" style={{ padding: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)' }}>
+              <p style={{ fontSize: 14, color: 'var(--text)', marginBottom: 10 }}>
+                {t('equip.torn.confirmarEliminar')}{' '}
+                <strong>{emp?.name} · {formatDay(shiftDate, locale)} · {start}–{end}</strong>
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="btn btn-ghost" style={{ flex: 1, minHeight: 44 }} onClick={() => setConfirmDelete(false)}>
+                  {t('common.cancellar')}
+                </button>
+                <button type="button" className="btn btn-danger" style={{ flex: 1, minHeight: 44 }} onClick={onDelete} disabled={isPending}>
+                  {t('equip.torn.eliminar')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={isPending || sameTimes}>
+                {t('equip.torn.guardar')}
               </button>
-            )}
-          </div>
+              {onDelete && (
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  style={{ minHeight: 40 }}
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={isPending}
+                  title={t('equip.torn.eliminar')}
+                  aria-label={t('equip.torn.eliminar')}
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+          )}
         </form>
       </div>
     </>

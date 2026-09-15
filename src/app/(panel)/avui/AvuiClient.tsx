@@ -9,6 +9,7 @@ import EmpAvatar from '@/components/ui/EmpAvatar'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { useT } from '@/context/LocaleContext'
 import { addDays } from '@/lib/dates'
+import { rememberReturnView } from '@/lib/tornar'
 import type { Reservation, ShiftWithEmployee } from '@/db/schema'
 
 // SVG fill no suporta CSS variables; hex literals del tema terracota
@@ -54,13 +55,10 @@ function getEmpStatus(shifts: ShiftWithEmployee[], nowMin: number): EmpStatus {
   return 'future'
 }
 
-const DIES  = ['Dg', 'Dll', 'Dm', 'Dc', 'Dj', 'Dv', 'Ds']
-const MESOS = ['Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny', 'Juliol', 'Agost', 'Setembre', 'Octubre', 'Novembre', 'Desembre']
-
 export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, selectedDate, today }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { t } = useT()
+  const { t, locale } = useT()
   const { toast, show, hide } = useToast()
   const [showCalendar, setShowCalendar] = useState(false)
   const [showNotif, setShowNotif] = useState(true)
@@ -72,12 +70,17 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => { rememberReturnView() }, [selectedDate])
+
   function formatDateHeader(iso: string): string {
     const [y, m, d] = iso.split('-').map(Number)
     const date = new Date(y, m - 1, d)
     const [ty, tm, td] = today.split('-').map(Number)
     const diff = Math.round((date.getTime() - new Date(ty, tm - 1, td).getTime()) / 86_400_000)
-    const label = `${DIES[date.getDay()]} ${d} ${MESOS[m - 1]}`
+    const il = locale === 'ca' ? 'ca' : 'es'
+    const weekday = new Intl.DateTimeFormat(il, { weekday: 'long' }).format(date)
+    const month = new Intl.DateTimeFormat(il, { month: 'long' }).format(date)
+    const label = `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${d} ${month}`
     if (diff === 0) return `${t('avui.avuiLabel')} — ${label}`
     if (diff === 1) return `${t('avui.dema')} — ${label}`
     if (diff === -1) return `${t('avui.ahir')} — ${label}`
@@ -122,8 +125,10 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
       {/* ── Capçalera ── */}
       <div className="today-header">
         <div className="today-heading">
-          <h1>{t('nav.avui')}</h1>
-          <p className="today-date">{formatDateHeader(selectedDate).split(' — ').at(-1)}</p>
+          <h1>{formatDateHeader(selectedDate).split(' — ')[0]}</h1>
+          {formatDateHeader(selectedDate).includes(' — ') && (
+            <p className="today-date">{formatDateHeader(selectedDate).split(' — ')[1]}</p>
+          )}
         </div>
         <div className="today-controls">
         <button

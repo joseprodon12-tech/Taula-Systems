@@ -4,8 +4,9 @@ import type { ElementType, ReactNode } from 'react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Settings, LayoutDashboard, CalendarDays, ChevronLeft, Users } from 'lucide-react'
+import { Plus, Settings, LayoutDashboard, CalendarDays, ChevronLeft, Users, LogOut } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
+import { signOut } from '@/app/actions/auth'
 import type { TKey } from '@/lib/i18n'
 
 const NAV_W         = 224
@@ -38,7 +39,8 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
   const isEquip = pathname.startsWith('/equip')
 
   function handleNovaReserva() {
-    const data = searchParams.get('data')
+    // A la vista setmanal 'data' és el dilluns de la setmana, no un dia triat: el formulari ha de proposar avui
+    const data = searchParams.get('vista') === 'setmana' ? null : searchParams.get('data')
     router.push(data ? `/reserva/nova?data=${data}` : '/reserva/nova')
     setShowSheet(false)
   }
@@ -129,6 +131,22 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
               <Plus size={18} />
             </Link>
           )}
+          <form action={signOut} style={{ marginTop: 8 }}>
+            <button
+              type="submit"
+              className="panel-nav-link flex items-center rounded-lg text-sm font-medium transition-colors w-full"
+              style={{
+                gap: isExpanded ? 12 : 0,
+                justifyContent: isExpanded ? 'flex-start' : 'center',
+                padding: isExpanded ? '8px 12px' : '10px 0',
+                color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer',
+              }}
+              title={!isExpanded ? t('nav.tancarSessio') : undefined}
+            >
+              <LogOut size={16} />
+              {isExpanded && <span style={{ whiteSpace: 'nowrap' }}>{t('nav.tancarSessio')}</span>}
+            </button>
+          </form>
         </div>
       </aside>
 
@@ -232,7 +250,7 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
                   cursor: 'pointer',
                 }}
               >
-                Cancel·lar
+                {t('common.cancellar')}
               </button>
             </div>
           </div>

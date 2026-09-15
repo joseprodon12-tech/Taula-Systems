@@ -108,17 +108,32 @@ export async function getClosures(restaurantId: string) {
   return data
 }
 
-export async function addClosure(restaurantId: string, date: string, reason: string) {
-  const { supabase, role } = await getAuthRestaurant()
+export async function addClosure(
+  date: string,
+  reason: string,
+  confirmed = false,
+): Promise<{ error: string } | { needsConfirmation: true; reservations: number } | { ok: true; reservations: number }> {
+  const { supabase, restaurant, role } = await getAuthRestaurant()
   if (role !== 'owner') return { error: 'Sense permisos' }
 
+  // Tancar no cancel·la res: el propietari ha de saber quantes reserves queden afectades abans de fer-ho
+  const { count } = await supabase
+    .from('reservations')
+    .select('id', { count: 'exact', head: true })
+    .eq('restaurant_id', restaurant.id)
+    .eq('date', date)
+    .in('status', ['pending', 'arrived', 'standby'])
+  const reservations = count ?? 0
+  if (reservations > 0 && !confirmed) return { needsConfirmation: true, reservations }
+
   const { error } = await supabase.from('closures').insert({
-    restaurant_id: restaurantId,
+    restaurant_id: restaurant.id,
     date,
     reason: reason || null,
   })
   if (error) throw error
   revalidatePath('/config')
+  return { ok: true, reservations }
 }
 
 export async function removeClosure(id: string) {

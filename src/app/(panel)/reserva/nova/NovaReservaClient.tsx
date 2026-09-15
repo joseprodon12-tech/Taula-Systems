@@ -8,6 +8,7 @@ import TimeWheelPicker from '@/components/TimeWheelPicker'
 import DatePicker from '@/components/DatePicker'
 import { createReservation, updateReservation, getAvailableSlotsForDate, getReservationsForDay, getCustomerHistory } from '@/app/actions/reservations'
 import { useT } from '@/context/LocaleContext'
+import { returnView } from '@/lib/tornar'
 import type { Restaurant, Reservation, Table } from '@/db/schema'
 
 interface Props {
@@ -87,7 +88,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialDa
 
   async function handlePhoneBlur() {
     if (phone.trim().length < 6) { setCustomerHistory(null); return }
-    const h = await getCustomerHistory(phone.trim())
+    const h = await getCustomerHistory(phone.trim(), date)
     setCustomerHistory(h)
   }
 
@@ -169,9 +170,11 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialDa
           show(result.error, 'error')
           return
         }
+        // Torna a la pantalla on es treballava (Avui, Gantt, Llista o Setmana), al dia de la reserva
+        const back = returnView(data.date, `/agenda?data=${data.date}`)
         router.push(result.warning
-          ? `/agenda?data=${data.date}&avis=capacitat&seccio=${data.section}`
-          : `/agenda?data=${data.date}`)
+          ? (back.startsWith('/agenda') ? back : `/agenda?data=${data.date}`) + `&avis=capacitat&seccio=${data.section}`
+          : back)
       }
     })
   }
@@ -442,7 +445,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialDa
               background: 'var(--primary-soft)', border: '1.5px solid var(--border)', borderRadius: 8,
             }}>
               <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', marginBottom: customerHistory.recentNote ? 4 : 0 }}>
-                {customerHistory.visits === 1 ? '1a visita' : `${customerHistory.visits}a visita`}
+                {`${customerHistory.visits + 1}a visita`}
                 {' · '}
                 <span style={{ fontWeight: 400 }}>última vegada el {formatShortDate(customerHistory.lastDate)}</span>
               </p>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
@@ -12,6 +12,7 @@ import MiniCalendar from '@/components/MiniCalendar'
 import DatePicker from '@/components/DatePicker'
 import ReservationCard from '@/components/ReservationCard'
 import { Toast, useToast } from '@/components/ui/Toast'
+import { rememberReturnView } from '@/lib/tornar'
 import type { Restaurant, Table, Reservation } from '@/db/schema'
 import type { TKey } from '@/lib/i18n'
 
@@ -52,6 +53,8 @@ export default function AgendaClient({
   const il = locale === 'ca' ? 'ca' : 'es'
   const [showCalendar, setShowCalendar] = useState(false)
   const [warningDismissed, setWarningDismissed] = useState(false)
+
+  useEffect(() => { rememberReturnView() }, [vista, selectedDate])
 
   // L'avís arriba per URL: el formulari navega aquí just després de desar i un toast allà es perdria
   const capacityMessage = (() => {
@@ -237,7 +240,7 @@ export default function AgendaClient({
         />
       )}
 
-      {vista === 'llista' && <ListaView reservations={dayReservations} />}
+      {vista === 'llista' && <ListaView reservations={dayReservations} date={selectedDate} />}
 
       {vista === 'setmana' && (
         <SetmanaView
@@ -292,7 +295,7 @@ export default function AgendaClient({
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function ListaView({ reservations }: { reservations: Reservation[] }) {
+function ListaView({ reservations, date }: { reservations: Reservation[]; date: string }) {
   const { t } = useT()
   const active = reservations.filter(r => r.status !== 'cancelled')
 
@@ -300,7 +303,7 @@ function ListaView({ reservations }: { reservations: Reservation[] }) {
     return (
       <div className="agenda-empty">
         <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 12 }}>Cap reserva aquest dia.</p>
-        <a href="/reserva/nova" className="btn btn-primary btn-sm">+ Nova reserva</a>
+        <a href={`/reserva/nova?data=${date}`} className="btn btn-primary btn-sm">+ {t('reserva.nova')}</a>
       </div>
     )
   }

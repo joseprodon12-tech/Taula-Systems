@@ -6,6 +6,7 @@ import { ChevronLeft } from 'lucide-react'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { updateReservationStatus, cancelReservation } from '@/app/actions/reservations'
 import { useT } from '@/context/LocaleContext'
+import { returnView } from '@/lib/tornar'
 import type { Reservation, Table } from '@/db/schema'
 
 const STATUS_BADGE: Record<string, string> = {
@@ -73,7 +74,7 @@ export default function ReservaDetallClient({ reservation, tables, customerHisto
         show(result.error, 'error')
         return
       }
-      router.push('/avui')
+      router.push(returnView(reservation.date, `/avui?data=${reservation.date}`))
     })
   }
 
@@ -167,27 +168,22 @@ export default function ReservaDetallClient({ reservation, tables, customerHisto
         />
         <div className="divider" />
         <Row label={t('reserva.camps.email')} value={reservation.customer_email || '—'} />
-        {customerHistory && customerHistory.visits >= 1 && (
-          <>
-            <div className="divider" />
-            <div style={{ padding: '4px 0' }}>
-              <span style={{
-                display: 'inline-block', padding: '3px 10px', borderRadius: 20,
-                background: 'var(--primary-soft)', color: 'var(--primary)', fontSize: 12, fontWeight: 600,
-              }}>
-                {customerHistory.visits === 1
-                  ? 'Primera visita'
-                  : `${customerHistory.visits}a visita · última el ${formatShortDate(customerHistory.lastDate)}`
-                }
-              </span>
-              {customerHistory.recentNote && (
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-                  Nota anterior: {customerHistory.recentNote}
-                </p>
-              )}
-            </div>
-          </>
-        )}
+        <div className="divider" />
+        <div style={{ padding: '4px 0' }}>
+          <span style={{
+            display: 'inline-block', padding: '3px 10px', borderRadius: 20,
+            background: 'var(--primary-soft)', color: 'var(--primary)', fontSize: 12, fontWeight: 600,
+          }}>
+            {customerHistory
+              ? `${customerHistory.visits + 1}a visita · anterior el ${formatShortDate(customerHistory.lastDate)}`
+              : 'Primera visita'}
+          </span>
+          {customerHistory?.recentNote && (
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+              Nota anterior: {customerHistory.recentNote}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Detalls de la reserva */}

@@ -37,3 +37,9 @@ export async function decideAuthorization(formData: FormData) {
   if (error) throw error
   redirect(data.redirect_url)
 }
+
+export async function signOut() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  redirect('/login')
+}

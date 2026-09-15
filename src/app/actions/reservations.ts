@@ -404,20 +404,22 @@ export async function moveReservation(
   return { ok: true }
 }
 
-export async function getCustomerHistory(phone: string): Promise<{
+export async function getCustomerHistory(phone: string, beforeDate?: string): Promise<{
   visits: number
   lastDate: string
   recentNote: string | null
 } | null> {
   if (!phone.trim()) return null
   const { supabase, restaurant } = await getAuthRestaurant()
-  const { data } = await supabase
+  let query = supabase
     .from('reservations')
     .select('date, notes')
     .eq('restaurant_id', restaurant.id)
     .eq('customer_phone', phone.trim())
     .neq('status', 'cancelled')
-    .order('date', { ascending: false })
+  // Només compten com a visites anteriors les d'abans del dia de la reserva: la mateixa no és un antecedent
+  if (beforeDate) query = query.lt('date', beforeDate)
+  const { data } = await query.order('date', { ascending: false })
   if (!data || data.length === 0) return null
   return {
     visits: data.length,

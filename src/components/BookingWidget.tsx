@@ -119,7 +119,7 @@ export default function BookingWidget({ restaurant }: Props) {
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Persones</label>
           <div className="flex gap-2 flex-wrap">
-            {[1, 2, 3, 4, 5, 6, 7].map(n => (
+            {Array.from({ length: restaurant.group_threshold - 1 }, (_, i) => i + 1).map(n => (
               <button
                 key={n}
                 type="button"
@@ -135,7 +135,7 @@ export default function BookingWidget({ restaurant }: Props) {
             ))}
             <button
               type="button"
-              onClick={() => setLocalParty(restaurant.group_threshold)}
+              onClick={() => setLocalParty(Math.max(localParty, restaurant.group_threshold))}
               className={`flex-1 min-w-[40px] py-2 rounded-xl border text-sm font-medium transition-colors min-h-[44px]
                 ${localParty >= restaurant.group_threshold
                   ? 'bg-amber-500 border-amber-500 text-white'
@@ -145,6 +145,27 @@ export default function BookingWidget({ restaurant }: Props) {
               {restaurant.group_threshold}+
             </button>
           </div>
+          {localParty >= restaurant.group_threshold && (
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setLocalParty(p => Math.max(restaurant.group_threshold, p - 1))}
+                aria-label="Una persona menys"
+                className="min-w-[44px] min-h-[44px] rounded-xl border border-gray-200 text-lg text-gray-700"
+              >
+                −
+              </button>
+              <span className="flex-1 text-center text-sm font-semibold text-gray-900">{localParty} persones</span>
+              <button
+                type="button"
+                onClick={() => setLocalParty(p => Math.min(50, p + 1))}
+                aria-label="Una persona més"
+                className="min-w-[44px] min-h-[44px] rounded-xl border border-gray-200 text-lg text-gray-700"
+              >
+                +
+              </button>
+            </div>
+          )}
           {isLargeGroup && (
             <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
               <p className="text-sm text-amber-800">

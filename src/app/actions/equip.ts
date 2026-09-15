@@ -191,6 +191,10 @@ export async function createShift(data: {
   if (!data.start_time) fieldErrors.start_time = "L'hora d'inici és obligatòria"
   if (!data.end_time) fieldErrors.end_time = "L'hora de fi és obligatòria"
   if (Object.keys(fieldErrors).length) return { error: 'Comprova els camps obligatoris', fieldErrors }
+  // Inici = final no és un torn de 24 h: gairebé sempre és un error en escriure l'hora (també des del connector)
+  if (data.start_time === data.end_time) {
+    return { error: "L'inici i el final no poden ser iguals", fieldErrors: { end_time: "L'inici i el final no poden ser iguals" } }
+  }
 
   const { supabase, restaurant, role } = await getAuthRestaurant()
   if (role !== 'owner') return { error: 'Sense permisos' }
@@ -245,6 +249,9 @@ export async function updateShift(
     notes?: string | null
   },
 ): Promise<{ ok: true } | { error: string; fieldErrors?: Record<string, string> }> {
+  if (data.start_time === data.end_time) {
+    return { error: "L'inici i el final no poden ser iguals", fieldErrors: { end_time: "L'inici i el final no poden ser iguals" } }
+  }
   const { supabase, restaurant, role } = await getAuthRestaurant()
   if (role !== 'owner') return { error: 'Sense permisos' }
 

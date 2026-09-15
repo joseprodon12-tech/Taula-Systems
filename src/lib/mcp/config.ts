@@ -123,12 +123,13 @@ export function registerSettingsTools(server: McpServer) {
 
   server.registerTool('afegir_dia_tancat', {
     title: 'Afegir dia tancat',
-    description: "Tanca el restaurant un dia concret (vacances, festiu...). Aquell dia no s'hi podran fer reserves. Només el propietari.",
-    inputSchema: { data: date, motiu: z.string().optional() },
-  }, async ({ data, motiu }) => {
-    const { restaurant: r } = await getRestaurant()
-    return reply(await addClosure(r.id, data, motiu ?? ''))
-  })
+    description: "Tanca el restaurant un dia concret (vacances, festiu...). Aquell dia no s'hi podran fer reserves noves; les que ja hi ha NO es cancel·len. Si hi ha reserves actives, la crida no tanca el dia i retorna needsConfirmation amb quantes n'hi ha (reservations): explica-ho a l'usuari i, només si hi està d'acord, torna a cridar amb confirmar: true. Només el propietari.",
+    inputSchema: {
+      data: date,
+      motiu: z.string().optional(),
+      confirmar: z.boolean().optional().describe("true només quan l'usuari ja ha acceptat tancar un dia que té reserves"),
+    },
+  }, async ({ data, motiu, confirmar }) => reply(await addClosure(data, motiu ?? '', confirmar ?? false)))
 
   server.registerTool('treure_dia_tancat', {
     title: 'Treure dia tancat',

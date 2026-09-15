@@ -9,6 +9,7 @@ import {
   addClosure, removeClosure, saveNotificationConfig,
 } from '@/app/actions/config'
 import { createTable, updateTable, deleteTable } from '@/app/actions/tables'
+import { signOut } from '@/app/actions/auth'
 import type { Restaurant, Closure, Table, WeeklyHours, DayHours } from '@/db/schema'
 import { useT } from '@/context/LocaleContext'
 
@@ -75,7 +76,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         await saveRestaurantInfo(restaurant.id, info)
         setInfoChanged(false)
         show('Informació guardada', 'success')
-      } catch { show('Error en guardar', 'error') }
+      } catch { show(t('config.errorGuardar'), 'error') }
     })
   }
 
@@ -98,7 +99,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         await saveWeeklyHours(restaurant.id, hours)
         setHoursChanged(false)
         show('Horari guardat', 'success')
-      } catch { show('Error en guardar', 'error') }
+      } catch { show(t('config.errorGuardar'), 'error') }
     })
   }
 
@@ -118,7 +119,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         await saveDurations(restaurant.id, lunchDuration, dinnerDuration)
         setDurationsChanged(false)
         show('Durades guardades', 'success')
-      } catch { show('Error en guardar', 'error') }
+      } catch { show(t('config.errorGuardar'), 'error') }
     })
   }
 
@@ -135,7 +136,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         await saveCapacity(restaurant.id, capacity.indoor, capacity.outdoor)
         setCapChanged(false)
         show('Capacitat guardada', 'success')
-      } catch { show('Error en guardar', 'error') }
+      } catch { show(t('config.errorGuardar'), 'error') }
     })
   }
 
@@ -163,7 +164,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         await saveNotificationConfig(restaurant.id, notif)
         setNotifChanged(false)
         show(t('config.notificacions.guardat'), 'success')
-      } catch { show('Error en guardar', 'error') }
+      } catch { show(t('config.errorGuardar'), 'error') }
     })
   }
 
@@ -171,18 +172,22 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
   const [closureList, setClosureList] = useState<Closure[]>(initialClosures)
   const [newDate, setNewDate] = useState('')
   const [newReason, setNewReason] = useState('')
+  const [closureWarning, setClosureWarning] = useState<number | null>(null)
 
-  function handleAddClosure() {
+  function handleAddClosure(confirmed = false) {
     if (!newDate) return
     startTransition(async () => {
       try {
-        await addClosure(restaurant.id, newDate, newReason)
+        const result = await addClosure(newDate, newReason, confirmed)
+        if ('error' in result) { show(result.error, 'error'); return }
+        if ('needsConfirmation' in result) { setClosureWarning(result.reservations); return }
         const fresh = await import('@/app/actions/config').then(m => m.getClosures(restaurant.id))
         setClosureList(fresh)
         setNewDate('')
         setNewReason('')
-        show('Dia tancat afegit', 'success')
-      } catch { show('Error en afegir', 'error') }
+        setClosureWarning(null)
+        show(t('config.tancats.afegit'), 'success')
+      } catch { show(t('config.tancats.errorAfegir'), 'error') }
     })
   }
   function handleRemoveClosure(id: string) {
@@ -190,7 +195,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
       try {
         await removeClosure(id)
         setClosureList(prev => prev.filter(c => c.id !== id))
-      } catch { show('Error en eliminar', 'error') }
+      } catch { show(t('config.tancats.errorEliminar'), 'error') }
     })
   }
 
@@ -283,7 +288,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         <div className="config-url" style={{ ...row, gap: 8 }}>
           <label htmlFor="config-slug" style={lbl}>{t('config.info.url')}</label>
           <div className="config-url-input">
-            <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginRight: 2 }}>taula.systems/r/</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginRight: 2 }}>taulaapp.com/r/</span>
             <input
               id="config-slug"
               value={info.slug}
@@ -293,12 +298,27 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
             />
           </div>
         </div>
+        {!infoChanged && info.slug && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '0 16px 12px' }}>
+            <a href={'/r/' + info.slug} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm" style={{ minHeight: 44 }}>
+              {t('config.info.obrir')}
+            </a>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ minHeight: 44 }}
+              onClick={() => navigator.clipboard.writeText('https://taulaapp.com/r/' + info.slug).then(() => show(t('config.info.copiat'), 'success'))}
+            >
+              {t('config.info.copiar')}
+            </button>
+          </div>
+        )}
         {infoChanged && (
           <>
             <div style={divider} />
             <div className="config-save" style={{ padding: '12px 16px' }}>
               <button className="btn btn-primary" style={{ width: '100%' }} onClick={saveInfo} disabled={isPending}>
-                Guardar informació
+                {t('config.info.guardar')}
               </button>
             </div>
           </>
@@ -439,10 +459,21 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
             onChange={e => setNewReason(e.target.value)}
             style={{ flex: 2 }}
           />
-          <button className="btn btn-secondary" aria-label={t('config.organitzacio.afegirTancat')} onClick={handleAddClosure} disabled={!newDate || isPending}>
+          <button className="btn btn-secondary" aria-label={t('config.organitzacio.afegirTancat')} onClick={() => handleAddClosure()} disabled={!newDate || isPending}>
             <Plus size={15} />
           </button>
         </div>
+      </div>
+</section>
+<section className="config-section">
+{/* SESSIÓ */}
+      <h2 style={sTitle}>{t('config.sessio')}</h2>
+      <div style={card}>
+        <form action={signOut} style={{ padding: '12px 16px' }}>
+          <button type="submit" className="btn btn-secondary" style={{ width: '100%', minHeight: 44 }}>
+            {t('nav.tancarSessio')}
+          </button>
+        </form>
       </div>
 </section>
         </div>
@@ -598,6 +629,31 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
         </div>
       {toast &&<Toast message={toast.message} type={toast.type} onClose={hide} />}
 
+      {/* ── Bottom sheet: Tancar un dia amb reserves ── */}
+      {closureWarning !== null && newDate && (
+        <>
+          <div onClick={() => setClosureWarning(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 40 }} />
+          <div className="config-sheet" role="dialog" aria-modal="true" aria-labelledby="closure-warning-title" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: 'var(--bg)', borderRadius: '16px 16px 0 0', padding: '24px 20px 32px', boxShadow: '0 -4px 24px rgba(0,0,0,0.12)' }}>
+            <p id="closure-warning-title" className="font-bold mb-2" style={{ color: 'var(--text)', fontSize: 17 }}>
+              {t('config.organitzacio.afegirTancat')} · {formatDate(newDate, locale)}
+            </p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
+              {t('config.tancats.reservesPre')}{' '}
+              <strong style={{ color: 'var(--text)' }}>
+                {closureWarning} {closureWarning === 1 ? t('config.tancats.reserves1') : t('config.tancats.reservesN')}
+              </strong>. {t('config.tancats.reservesPost')}
+            </p>
+            <a href={'/agenda?vista=llista&data=' + newDate} className="btn btn-ghost btn-sm" style={{ minHeight: 44, marginBottom: 20 }}>
+              {t('config.tancats.veure')}
+            </a>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setClosureWarning(null)}>{t('common.cancellar')}</button>
+              <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => handleAddClosure(true)} disabled={isPending}>{t('config.tancats.tancarIgualment')}</button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ── Bottom sheet: Confirmar eliminació de taula ── */}
       {deleteTableId && (
         <>
@@ -608,7 +664,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
               {t('config.taules.eliminarConfirm')}
             </p>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setDeleteTableId(null)}>Cancel·lar</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setDeleteTableId(null)}>{t('common.cancellar')}</button>
               <button className="btn btn-danger" style={{ flex: 1 }} onClick={confirmDeleteTable} disabled={isPending}>{t('config.taules.eliminar')}</button>
             </div>
           </div>
@@ -660,7 +716,7 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
               </div>
             </div>
             <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setTableSheet(null)}>Cancel·lar</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setTableSheet(null)}>{t('common.cancellar')}</button>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSaveTable} disabled={isPending || !tableForm.number.trim()}>
                 {tableSheet.mode === 'add' ? t('config.taules.afegir') : t('config.taules.editar')}
               </button>
@@ -717,7 +773,7 @@ function TableGroup({ title, tables, onEdit, onDelete, onAdd, isPending, placesL
         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 16px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: 15 }}
       >
         <Plus size={15} />
-        Afegir taula
+        {t('config.taules.afegir')}
       </button>
     </div>
   )
