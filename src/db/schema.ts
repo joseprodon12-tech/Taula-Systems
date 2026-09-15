@@ -101,3 +101,15 @@ export type Absence = {
   type: 'vacances' | 'baixa' | 'lliure' | 'altres'
   notes: string | null; created_at: string
 }
+
+export type Suggestion = {
+  id: string; restaurant_id: string; user_id: string
+  title: string; what: string; why: string
+  area: 'avui' | 'agenda' | 'reserves' | 'equip' | 'configuracio' | 'formulari_public' | 'notificacions' | 'connector_ia' | 'altres'
+  kind: 'error' | 'millora' | 'idea'
+  urgency: 'baixa' | 'normal' | 'alta'
+  example: string | null
+  status: 'nou' | 'acceptat' | 'fet' | 'descartat'
+  response: string | null
+  created_at: string; updated_at: string
+}
