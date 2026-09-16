@@ -42,10 +42,11 @@ interface Props {
   reservationsByDay: Record<string, Reservation[]>
   dots: Record<string, { count: number; pax: number }>
   capacityWarning: 'indoor' | 'outdoor' | null
+  capacityService: 'dinar' | 'sopar'
 }
 
 export default function AgendaClient({
-  vista, today, selectedDate, restaurant, tables, dayReservations, reservationsByDay, dots, capacityWarning,
+  vista, today, selectedDate, restaurant, tables, dayReservations, reservationsByDay, dots, capacityWarning, capacityService,
 }: Props) {
   const router = useRouter()
   const { t, locale } = useT()
@@ -59,12 +60,18 @@ export default function AgendaClient({
   // L'avís arriba per URL: el formulari navega aquí just després de desar i un toast allà es perdria
   const capacityMessage = (() => {
     if (!capacityWarning) return null
+    // Les places surten de les taules i es compten per servei, igual que al servidor
+    const isLunch = capacityService === 'dinar'
     const occupied = dayReservations
       .filter(r => r.section === capacityWarning && (r.status === 'pending' || r.status === 'arrived'))
+      .filter(r => (parseInt(r.time) < 17) === isLunch)
       .reduce((s, r) => s + r.party_size, 0)
-    const capacity = capacityWarning === 'indoor' ? restaurant.capacity_indoor : restaurant.capacity_outdoor
+    const capacity = tables
+      .filter(tb => tb.section === capacityWarning)
+      .reduce((s, tb) => s + tb.capacity, 0)
     const label = capacityWarning === 'indoor' ? t('reserva.seccions.interior') : t('reserva.seccions.terrassa')
-    return `${label}: ${occupied}/${capacity} ${t('reserva.missatges.capacitat')}`
+    const service = isLunch ? t('avui.dinar') : t('avui.sopar')
+    return `${label} · ${service}: ${occupied}/${capacity} ${t('reserva.missatges.capacitat')}`
   })()
 
   function switchVista(v: Vista) {

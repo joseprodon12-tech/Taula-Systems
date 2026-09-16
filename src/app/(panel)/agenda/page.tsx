@@ -5,11 +5,11 @@ import { todayISO, addDays, getMondayISO } from '@/lib/dates'
 import AgendaClient from './AgendaClient'
 
 interface Props {
-  searchParams: Promise<{ vista?: string; data?: string; avis?: string; seccio?: string }>
+  searchParams: Promise<{ vista?: string; data?: string; avis?: string; seccio?: string; servei?: string }>
 }
 
 export default async function AgendaPage({ searchParams }: Props) {
-  const { vista: vistaParam, data: dataParam, avis, seccio } = await searchParams
+  const { vista: vistaParam, data: dataParam, avis, seccio, servei } = await searchParams
   const today = todayISO()
 
   const vista = vistaParam === 'llista' ? 'llista' as const
@@ -17,6 +17,7 @@ export default async function AgendaPage({ searchParams }: Props) {
               : 'gantt' as const
 
   const capacityWarning = avis === 'capacitat' && (seccio === 'indoor' || seccio === 'outdoor') ? seccio : null
+  const capacityService = servei === 'sopar' ? 'sopar' as const : 'dinar' as const
 
   const selectedDate = dataParam ?? today
   const monday = getMondayISO(selectedDate)
@@ -37,6 +38,7 @@ export default async function AgendaPage({ searchParams }: Props) {
         reservationsByDay={reservationsByDay}
         dots={dots}
         capacityWarning={null}
+        capacityService="dinar"
       />
     )
   }
@@ -57,6 +59,7 @@ export default async function AgendaPage({ searchParams }: Props) {
       reservationsByDay={{}}
       dots={dots}
       capacityWarning={capacityWarning}
+      capacityService={capacityService}
     />
   )
 }

@@ -5,7 +5,7 @@ import { Trash2, Plus, Pencil, ChevronDown, ChevronRight } from 'lucide-react'
 import DatePicker from '@/components/DatePicker'
 import { Toast, useToast } from '@/components/ui/Toast'
 import {
-  saveRestaurantInfo, saveWeeklyHours, saveCapacity, saveDurations,
+  saveRestaurantInfo, saveWeeklyHours, saveDurations,
   addClosure, removeClosure, saveNotificationConfig,
 } from '@/app/actions/config'
 import { createTable, updateTable, deleteTable } from '@/app/actions/tables'
@@ -123,22 +123,6 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
     })
   }
 
-  // ── Capacity ──
-  const [capacity, setCapacity] = useState({
-    indoor:  restaurant.capacity_indoor ?? 30,
-    outdoor: restaurant.capacity_outdoor ?? 0,
-  })
-  const [capChanged, setCapChanged] = useState(false)
-
-  function saveCapacityData() {
-    startTransition(async () => {
-      try {
-        await saveCapacity(restaurant.id, capacity.indoor, capacity.outdoor)
-        setCapChanged(false)
-        show('Capacitat guardada', 'success')
-      } catch { show(t('config.errorGuardar'), 'error') }
-    })
-  }
 
   // ── Notification config ──
   const [notif, setNotif] = useState({
@@ -244,6 +228,9 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
 
   const indoorTables  = tableList.filter(t => t.section === 'indoor')
   const outdoorTables = tableList.filter(t => t.section === 'outdoor')
+  // Les places del local són la suma de les taules: no hi ha cap número a part que es pugui contradir
+  const indoorSeats  = indoorTables.reduce((s, t) => s + t.capacity, 0)
+  const outdoorSeats = outdoorTables.reduce((s, t) => s + t.capacity, 0)
 
   const DAYS = useMemo(() =>
     Array.from({ length: 7 }, (_, i) => {
@@ -480,46 +467,11 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
 
         <div className="config-sections config-sections-taules">
           <section className="config-section">
-{/* CAPACITAT */}
-      <h2 style={sTitle}>{t('config.seccions.capacitat')}</h2>
-      <div style={card}>
-        <div className="config-row" style={row}>
-          <label htmlFor="config-indoor" style={lbl}>{t('config.taules.sala')}</label>
-          <input id="config-indoor"
-            type="number" min={0} max={999}
-            value={capacity.indoor}
-            onChange={e => { setCapacity(p => ({ ...p, indoor: +e.target.value })); setCapChanged(true) }}
-            style={{ ...inputRight, width: 84 }}
-          />
-        </div>
-        <div style={divider} />
-        <div className="config-row" style={row}>
-          <label htmlFor="config-outdoor" style={lbl}>{t('config.taules.terrassa')}</label>
-          <input id="config-outdoor"
-            type="number" min={0} max={999}
-            value={capacity.outdoor}
-            onChange={e => { setCapacity(p => ({ ...p, outdoor: +e.target.value })); setCapChanged(true) }}
-            style={{ ...inputRight, width: 84 }}
-          />
-        </div>
-        {capChanged && (
-          <>
-            <div style={divider} />
-            <div className="config-save" style={{ padding: '12px 16px' }}>
-              <button className="btn btn-primary" style={{ width: '100%' }} onClick={saveCapacityData} disabled={isPending}>
-                Guardar capacitat
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-</section>
-<section className="config-section">
 {/* TAULES */}
       <h2 style={sTitle}>{t('config.taules.titol')}</h2>
       <div style={card}>
         <TableGroup
-          title={t('config.taules.sala')}
+          title={`${t('config.taules.sala')} · ${indoorSeats} ${t('config.taules.places')}`}
           tables={indoorTables}
           onEdit={openEditSheet}
           onDelete={setDeleteTableId}
@@ -527,20 +479,16 @@ export default function ConfigClient({ restaurant, closures: initialClosures, ta
           isPending={isPending}
           placesLabel={t('config.taules.places')}
         />
-        {restaurant.capacity_outdoor > 0 && (
-          <>
-            <div style={{ height: 1, background: 'var(--border)' }} />
-            <TableGroup
-              title={t('config.taules.terrassa')}
-              tables={outdoorTables}
-              onEdit={openEditSheet}
-              onDelete={setDeleteTableId}
-              onAdd={() => openAddSheet('outdoor')}
-              isPending={isPending}
-              placesLabel={t('config.taules.places')}
-            />
-          </>
-        )}
+        <div style={{ height: 1, background: 'var(--border)' }} />
+        <TableGroup
+          title={`${t('config.taules.terrassa')} · ${outdoorSeats} ${t('config.taules.places')}`}
+          tables={outdoorTables}
+          onEdit={openEditSheet}
+          onDelete={setDeleteTableId}
+          onAdd={() => openAddSheet('outdoor')}
+          isPending={isPending}
+          placesLabel={t('config.taules.places')}
+        />
       </div>
 </section>
         </div>

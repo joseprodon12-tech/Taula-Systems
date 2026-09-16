@@ -45,7 +45,7 @@ const ca = {
       opcional:         '(opcional)',
       notesPlaceholder: "Al·lèrgies, preferències de taula...",
       taulaPlaceholder: 'Ex: T-3, Barra, Terrassa 2',
-      alergies:         'Al·lèrgies',
+      alergies:         'Comentaris',
       ocasio:           'Ocasió especial',
     },
     alergies: {
@@ -62,7 +62,7 @@ const ca = {
       triarAltra: 'Tria una altra hora',
     },
     estats: {
-      pending:   'Pendent',
+      pending:   'Confirmada',
       arrived:   'Ha vingut',
       no_show:   'No-show',
       cancelled: 'Cancel·lada',
@@ -363,7 +363,7 @@ const es: DeepString<typeof ca> = {
       opcional:         '(opcional)',
       notesPlaceholder: 'Alergias, preferencias de mesa...',
       taulaPlaceholder: 'Ej: M-3, Barra, Terraza 2',
-      alergies:         'Alergias',
+      alergies:         'Comentarios',
       ocasio:           'Ocasión especial',
     },
     alergies: {
@@ -380,7 +380,7 @@ const es: DeepString<typeof ca> = {
       triarAltra: 'Elige otra hora',
     },
     estats: {
-      pending:   'Pendiente',
+      pending:   'Confirmada',
       arrived:   'Ha llegado',
       no_show:   'No-show',
       cancelled: 'Cancelada',

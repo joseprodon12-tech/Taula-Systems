@@ -43,8 +43,13 @@ export function registerReservationTools(server: McpServer) {
     const [{ restaurant }, franges, reserves, taules] = await Promise.all([
       getRestaurant(), getAvailableSlotsForDate(day), getReservationsForDay(day), getTables(),
     ])
-    const occupied = (s: string) => reserves
+    // Les places surten de les taules i es compten per servei, igual que al panell
+    const seats = (s: string) => taules
+      .filter(t => t.section === s)
+      .reduce((sum, t) => sum + t.capacity, 0)
+    const occupied = (s: string, lunch: boolean) => reserves
       .filter(r => r.section === s && (r.status === 'pending' || r.status === 'arrived'))
+      .filter(r => (Number(r.time.split(':')[0]) < 17) === lunch)
       .reduce((sum, r) => sum + r.party_size, 0)
 
     let taulesAHora
@@ -63,8 +68,8 @@ export function registerReservationTools(server: McpServer) {
       obert: franges.length > 0,
       franges,
       places: {
-        interior: { capacitat: restaurant.capacity_indoor, ocupades: occupied('indoor') },
-        terrassa: { capacitat: restaurant.capacity_outdoor, ocupades: occupied('outdoor') },
+        interior: { places_de_taules: seats('indoor'), ocupades_dinar: occupied('indoor', true), ocupades_sopar: occupied('indoor', false) },
+        terrassa: { places_de_taules: seats('outdoor'), ocupades_dinar: occupied('outdoor', true), ocupades_sopar: occupied('outdoor', false) },
       },
       ...(taulesAHora ? { taules: taulesAHora } : {}),
     })

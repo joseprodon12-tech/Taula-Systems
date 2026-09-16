@@ -9,6 +9,7 @@ import { todayISO } from '@/lib/dates'
 interface PublicRestaurant {
   id: string
   name: string
+  phone: string | null
   group_threshold: number
   weekly_hours: WeeklyHours
   notification_channel: 'whatsapp' | 'email' | 'none'
@@ -324,7 +325,7 @@ export default function BookingWidget({ restaurant }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-3">Al·lèrgies o intoleràncies</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-3">Comentaris</label>
           <div className="grid grid-cols-2 gap-2">
             {ALLERGY_OPTIONS.map(opt => (
               <button
@@ -406,6 +407,11 @@ export default function BookingWidget({ restaurant }: Props) {
           <div><span className="text-gray-500">Persones:</span> <strong>{data.party_size}</strong></div>
           <div><span className="text-gray-500">Nom:</span> <strong>{data.name}</strong></div>
         </div>
+        <p className="mt-4 text-sm text-gray-600">
+          {restaurant.phone
+            ? <>Per canviar o cancel·lar la reserva, truca&apos;ns al <a href={`tel:${restaurant.phone}`} className="font-semibold text-gray-900 underline">{restaurant.phone}</a>.</>
+            : 'Per canviar o cancel·lar la reserva, contacta amb el restaurant.'}
+        </p>
       </div>
     )
   }

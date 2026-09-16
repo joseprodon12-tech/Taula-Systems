@@ -49,18 +49,6 @@ export async function saveWeeklyHours(id: string, weekly_hours: WeeklyHours) {
   revalidatePath('/config')
 }
 
-export async function saveCapacity(id: string, capacity_indoor: number, capacity_outdoor: number) {
-  const { supabase, role } = await getAuthRestaurant()
-  if (role !== 'owner') return { error: 'Sense permisos' }
-
-  const { error } = await supabase.from('restaurants').update({
-    capacity_indoor,
-    capacity_outdoor,
-    updated_at: new Date().toISOString(),
-  }).eq('id', id)
-  if (error) throw error
-  revalidatePath('/config')
-}
 
 export async function saveDurations(id: string, lunch: number, dinner: number) {
   const { supabase, role } = await getAuthRestaurant()

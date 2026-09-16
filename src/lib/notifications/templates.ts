@@ -21,6 +21,8 @@ export function buildEmailTemplate(
   const paxText = `${pax} ${pax === 1 ? 'persona' : 'persones'}`
   const name = reservation.customer_name
   const rName = restaurant.name
+  // El client ha de saber com canviar o cancel·lar sense haver de buscar el telèfon
+  const contacte = restaurant.phone ? `truca'ns al ${restaurant.phone}` : 'contacta amb nosaltres'
 
   // Cap al·lèrgia ni dada de salut — minimització RGPD art. 9
   switch (kind) {
@@ -36,10 +38,10 @@ export function buildEmailTemplate(
             { label: 'Hora', value: `${reservation.time}h` },
             { label: 'Persones', value: paxText },
           ],
-          footer: 'Si necessites canviar o cancel·lar la reserva, contacta amb nosaltres.',
+          footer: `Si necessites canviar o cancel·lar la reserva, ${contacte}.`,
           restaurantName: rName,
         }),
-        text: `Reserva rebuda — ${rName}\n\nHola ${name},\nLa teva reserva ha estat rebuda.\n\nData: ${formattedDate}\nHora: ${reservation.time}h\nPersones: ${paxText}\n\nSi necessites canviar, contacta amb nosaltres.`,
+        text: `Reserva rebuda — ${rName}\n\nHola ${name},\nLa teva reserva ha estat rebuda.\n\nData: ${formattedDate}\nHora: ${reservation.time}h\nPersones: ${paxText}\n\nSi necessites canviar o cancel·lar la reserva, ${contacte}.`,
       }
 
     case 'reminder':
@@ -71,10 +73,10 @@ export function buildEmailTemplate(
             { label: 'Data', value: formattedDate },
             { label: 'Hora', value: `${reservation.time}h` },
           ],
-          footer: 'Si vols fer una nova reserva, pots contactar amb nosaltres.',
+          footer: `Si vols fer una nova reserva, ${contacte}.`,
           restaurantName: rName,
         }),
-        text: `Reserva cancel·lada — ${rName}\n\nHola ${name},\nLa teva reserva del ${formattedDate} a les ${reservation.time}h ha estat cancel·lada.\n\nSi vols fer una nova reserva, contacta amb nosaltres.`,
+        text: `Reserva cancel·lada — ${rName}\n\nHola ${name},\nLa teva reserva del ${formattedDate} a les ${reservation.time}h ha estat cancel·lada.\n\nSi vols fer una nova reserva, ${contacte}.`,
       }
   }
 }

@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import {
-  getRestaurant, saveRestaurantInfo, saveWeeklyHours, saveCapacity, saveDurations,
+  getRestaurant, saveRestaurantInfo, saveWeeklyHours, saveDurations,
   saveNotificationConfig, getClosures, addClosure, removeClosure,
 } from '@/app/actions/config'
 import { getTables, createTable, updateTable, deleteTable } from '@/app/actions/tables'
@@ -32,7 +32,10 @@ export function registerSettingsTools(server: McpServer) {
       missatge_benvinguda: restaurant.welcome_message,
       whatsapp_propietari: restaurant.whatsapp_number,
       horari: Object.fromEntries(DAYS.map((d, i) => [d, restaurant.weekly_hours[String(i)] ?? { closed: true }])),
-      capacitat: { interior: restaurant.capacity_indoor, terrassa: restaurant.capacity_outdoor },
+      places_de_taules: {
+        interior: taules.filter(t => t.section === 'indoor').reduce((s, t) => s + t.capacity, 0),
+        terrassa: taules.filter(t => t.section === 'outdoor').reduce((s, t) => s + t.capacity, 0),
+      },
       durada_minuts: { dinar: restaurant.default_duration_lunch_min, sopar: restaurant.default_duration_dinner_min },
       notificacions: { canal: restaurant.notification_channel, remitent_email: restaurant.notification_email_from },
       taules,
@@ -87,14 +90,6 @@ export function registerSettingsTools(server: McpServer) {
     return reply(await saveWeeklyHours(r.id, { ...r.weekly_hours, [key]: day }))
   })
 
-  server.registerTool('guardar_capacitat', {
-    title: 'Guardar capacitat',
-    description: "Canvia les places totals d'interior i/o terrassa (serveix per avisar quan es superen). Només el propietari.",
-    inputSchema: { interior: z.number().int().min(0).optional(), terrassa: z.number().int().min(0).optional() },
-  }, async ({ interior, terrassa }) => {
-    const { restaurant: r } = await getRestaurant()
-    return reply(await saveCapacity(r.id, interior ?? r.capacity_indoor, terrassa ?? r.capacity_outdoor))
-  })
 
   server.registerTool('guardar_durades', {
     title: 'Guardar durades per defecte',

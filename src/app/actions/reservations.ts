@@ -205,20 +205,31 @@ export async function createReservation(data: {
     if (conflict) return conflict
   }
 
-  const { data: occupied } = await supabase
-    .from('reservations')
-    .select('party_size')
-    .eq('restaurant_id', restaurant.id)
-    .eq('date', data.date)
-    .eq('section', section)
-    .in('status', ['pending', 'arrived'])
+  const [{ data: occupied }, { data: sectionTables }] = await Promise.all([
+    supabase
+      .from('reservations')
+      .select('party_size, time')
+      .eq('restaurant_id', restaurant.id)
+      .eq('date', data.date)
+      .eq('section', section)
+      .in('status', ['pending', 'arrived']),
+    supabase
+      .from('tables')
+      .select('capacity')
+      .eq('restaurant_id', restaurant.id)
+      .eq('section', section),
+  ])
 
-  const occupiedPax = (occupied || []).reduce((s: number, r: { party_size: number }) => s + r.party_size, 0)
-  const capacity = section === 'indoor' ? restaurant.capacity_indoor : restaurant.capacity_outdoor
+  // Les places surten de les taules i es compten per servei: una taula es fa servir un cop a dinar i un cop a sopar
+  const capacity = (sectionTables || []).reduce((s: number, t: { capacity: number }) => s + t.capacity, 0)
+  const occupiedPax = (occupied || [])
+    .filter((r: { time: string }) => (parseInt(r.time) < 17) === isLunch)
+    .reduce((s: number, r: { party_size: number }) => s + r.party_size, 0)
   const total = occupiedPax + data.party_size
   const sectionLabel = section === 'indoor' ? 'El menjador' : 'La terrassa'
+  const serviceLabel = isLunch ? 'al dinar' : 'al sopar'
   const warning = capacity > 0 && total > capacity
-    ? `⚠️ ${sectionLabel} té ${occupiedPax}/${capacity} places ocupades — reserva guardada igualment`
+    ? `⚠️ ${sectionLabel} ${serviceLabel}: ${total}/${capacity} places — reserva guardada igualment`
     : undefined
 
   const { data: newRes, error } = await supabase.from('reservations').insert({

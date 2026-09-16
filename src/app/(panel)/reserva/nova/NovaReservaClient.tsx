@@ -84,7 +84,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialDa
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [customerHistory, setCustomerHistory] = useState<{ visits: number; lastDate: string; recentNote: string | null } | null>(null)
 
-  const hasOutdoor = restaurant.capacity_outdoor > 0
+  const hasOutdoor = tables.some(t => t.section === 'outdoor')
 
   async function handlePhoneBlur() {
     if (phone.trim().length < 6) { setCustomerHistory(null); return }
@@ -173,7 +173,8 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialDa
         // Torna a la pantalla on es treballava (Avui, Gantt, Llista o Setmana), al dia de la reserva
         const back = returnView(data.date, `/agenda?data=${data.date}`)
         router.push(result.warning
-          ? (back.startsWith('/agenda') ? back : `/agenda?data=${data.date}`) + `&avis=capacitat&seccio=${data.section}`
+          ? (back.startsWith('/agenda') ? back : `/agenda?data=${data.date}`)
+            + `&avis=capacitat&seccio=${data.section}&servei=${parseInt(data.time) < 17 ? 'dinar' : 'sopar'}`
           : back)
       }
     })

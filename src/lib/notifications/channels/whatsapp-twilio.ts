@@ -67,13 +67,15 @@ function buildWhatsAppBody(restaurant: Restaurant, reservation: Reservation, kin
   })
   const pax = reservation.party_size
   const paxText = `${pax} ${pax === 1 ? 'persona' : 'persones'}`
+  // El client ha de saber com canviar o cancel·lar sense haver de buscar el telèfon
+  const trucada = restaurant.phone ? ` o truca al ${restaurant.phone}` : ''
 
   switch (kind) {
     case 'confirmation':
-      return `🍽️ *${restaurant.name}*\n\nHola ${reservation.customer_name}! La teva reserva ha estat rebuda.\n\n📅 ${formattedDate}\n🕐 ${reservation.time}h\n👥 ${paxText}\n\nEn 24 hores rebràs un recordatori. Si necessites canviar, respon a aquest missatge.`
+      return `🍽️ *${restaurant.name}*\n\nHola ${reservation.customer_name}! La teva reserva ha estat rebuda.\n\n📅 ${formattedDate}\n🕐 ${reservation.time}h\n👥 ${paxText}\n\nEn 24 hores rebràs un recordatori. Si necessites canviar o cancel·lar, respon a aquest missatge${trucada}.`
     case 'reminder':
       return `🍽️ *${restaurant.name}*\n\nHola ${reservation.customer_name}! Et recordem la teva reserva de demà.\n\n📅 ${formattedDate}\n🕐 ${reservation.time}h\n👥 ${paxText}\n\nT'esperem!`
     case 'cancellation':
-      return `🍽️ *${restaurant.name}*\n\nHola ${reservation.customer_name}. La teva reserva del ${formattedDate} a les ${reservation.time}h ha estat cancel·lada.\n\nSi vols fer una nova reserva, pots contactar-nos.`
+      return `🍽️ *${restaurant.name}*\n\nHola ${reservation.customer_name}. La teva reserva del ${formattedDate} a les ${reservation.time}h ha estat cancel·lada.\n\nSi vols fer una nova reserva, respon a aquest missatge${trucada}.`
   }
 }
