@@ -165,7 +165,8 @@ main > * { animation: page-in 0.18s ease both; }
   outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
-.panel-content { padding: 24px 16px calc(80px + env(safe-area-inset-bottom)); }
+/* El marge inferior deixa lliures la navegació (64) i el botó rodó, que arriba a 136 des del fons */
+.panel-content { padding: 24px 16px calc(168px + env(safe-area-inset-bottom)); }
 @media (min-width: 1280px) { .panel-content { padding-bottom: 24px; } }
 .panel-brand { font-size: 24px; font-weight: 750; letter-spacing: -1px; color: var(--text); white-space: nowrap; }
 .panel-brand span { color: var(--primary); }
@@ -196,10 +197,19 @@ main > * { animation: page-in 0.18s ease both; }
 .today-team-empty { display: flex; flex: 1; flex-direction: column; gap: 24px; padding-top: 10px; }
 .today-team-empty p { font-size: 14px; color: var(--text-muted); }
 .today-team-empty a { border-top: 1px solid var(--border); padding-top: 16px; margin-top: auto; font-size: 13px; font-weight: 600; color: var(--primary); text-decoration: none; }
-.today-notifications { padding: 0; margin-bottom: 20px; overflow: hidden; }
-.today-notification-toggle { width: 100%; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; font-size: 14px; color: var(--text); border: 0; background: var(--bg); cursor: pointer; text-align: left; }
-.today-notification-count { margin-left: 8px; background: var(--surface); color: var(--text-muted); border-radius: 5px; padding: 2px 7px; font-size: 12px; font-weight: 600; }
-.today-notification-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 20px; background: var(--bg); border-left: 3px solid var(--warning); }
+.today-now { padding: 16px 16px 4px; margin-bottom: 12px; }
+.today-now-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.today-now-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--border); cursor: pointer; }
+.today-now-time { font-size: 17px; font-weight: 700; width: 52px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.today-now-name { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.today-now-sub { font-size: 13px; color: var(--text-muted); }
+.today-now-foot { padding: 12px 0 8px; border-top: 1px solid var(--border); }
+.today-now-foot a { font-size: 13px; font-weight: 600; color: var(--primary); text-decoration: none; }
+.today-day-label { display: flex; align-items: center; gap: 10px; margin: 18px 2px 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.today-day-label div { flex: 1; height: 1px; background: var(--border); }
+.today-notifications { padding: 0; margin-bottom: 12px; overflow: hidden; }
+.today-notification-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 16px; background: var(--bg); border-left: 3px solid var(--warning); font-size: 14px; }
+.today-notification-row a { font-size: 13px; font-weight: 600; color: var(--primary); text-decoration: none; white-space: nowrap; }
 .today-notification-row + .today-notification-row { border-top: 1px solid var(--border); }
 @media (min-width: 768px) {
   .panel-content { padding: 32px 28px 104px; }
@@ -207,9 +217,16 @@ main > * { animation: page-in 0.18s ease both; }
 }
 @media (min-width: 1280px) { .panel-content { padding: 36px 36px 32px; } }
 @media (max-width: 479px) {
-  .today-header { align-items: flex-start; gap: 10px; }
-  .today-heading h1 { font-size: 26px; }
-  .today-date { font-size: 13px; }
+  /* El dia en una sola línia, com a Taules, i enganxat en baixar */
+  .today-header {
+    align-items: center; gap: 8px; margin-bottom: 14px;
+    position: sticky; top: -24px; z-index: 20;
+    background: var(--surface); padding-block: 6px;
+  }
+  .today-heading { display: flex; align-items: baseline; gap: 6px; }
+  .today-heading h1 { font-size: 15px; font-weight: 650; letter-spacing: normal; }
+  .today-date { margin-top: 0; font-size: 15px; font-weight: 650; color: var(--text); }
+  .today-date::before { content: "— "; color: var(--text-muted); }
   .today-controls { max-width: 144px; gap: 4px; }
   .today-date-button { min-width: 40px; min-height: 44px; }
   .today-summary { padding: 20px; }

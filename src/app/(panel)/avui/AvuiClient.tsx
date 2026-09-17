@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CalendarDays, Users, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarDays, Users, Plus } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Cell, LabelList, ResponsiveContainer } from 'recharts'
 import DatePicker from '@/components/DatePicker'
 import EmpAvatar from '@/components/ui/EmpAvatar'
@@ -61,7 +61,6 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
   const { t, locale } = useT()
   const { toast, show, hide } = useToast()
   const [showCalendar, setShowCalendar] = useState(false)
-  const [showNotif, setShowNotif] = useState(true)
 
   useEffect(() => {
     if (searchParams.get('created') === '1') {
@@ -100,14 +99,25 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes()
   const nowHour = new Date().getHours()
 
+  const isToday = selectedDate === today
+
   const upcoming = useMemo(() => {
     const now = new Date().getHours() * 60 + new Date().getMinutes()
     return active
       .filter(r => r.status !== 'arrived')
-      .filter(r => { const m = toMin(r.time); return m > now && m - now <= 120 })
+      .filter(r => toMin(r.time) > now)
       .sort((a, b) => a.time.localeCompare(b.time))
       .slice(0, 3)
   }, [active]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Qui seu ara: la reserva ocupa la taula des de l'hora fins que s'acaba la durada
+  const seatedPax = isToday
+    ? active
+        .filter(r => r.status !== 'no_show')
+        .filter(r => { const s = toMin(r.time); return nowMin >= s && nowMin < s + r.duration_minutes })
+        .reduce((s, r) => s + r.party_size, 0)
+    : 0
+  const perVenir = isToday ? active.filter(r => toMin(r.time) > nowMin).length : 0
 
   const empEntries = useMemo(() => {
     const map = new Map<string, { emp: ShiftWithEmployee['employee']; shifts: ShiftWithEmployee[] }>()
@@ -160,7 +170,95 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
         </div>
       </div>
 
+      {/* ── ARA MATEIX: el que passa en aquest moment ── */}
+      {isToday && (seatedPax > 0 || upcoming.length > 0) && (
+        <div className="card today-now">
+          <div className="today-now-head">
+            <span>{t('avui.ara.titol')}</span>
+            <span>{String(Math.floor(nowMin / 60)).padStart(2, '0')}:{String(nowMin % 60).padStart(2, '0')}</span>
+          </div>
+
+          <p className="today-total">
+            <strong>{seatedPax}</strong>
+            <span>{t('avui.ara.aTaula')} · {perVenir} {perVenir === 1 ? t('avui.reserva') : t('avui.reserves')} {t('avui.ara.perVenir')}</span>
+          </p>
+
+          {upcoming.map(r => {
+            const minuts = toMin(r.time) - nowMin
+            return (
+              <div key={r.id} className="today-now-row" onClick={() => router.push(`/reserva/${r.id}`)}>
+                <span className="today-now-time">{r.time}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="today-now-name">{r.customer_name}</div>
+                  <div className="today-now-sub">
+                    {r.party_size} {r.party_size === 1 ? t('avui.ara.persona') : t('avui.ara.persones')}
+                    {' · '}
+                    {r.table_number ? `${t('avui.ara.taula')} ${r.table_number}` : t('avui.ara.senseTaula')}
+                  </div>
+                </div>
+                {r.allergies.length > 0 && (
+                  <span className="badge" style={{ background: 'var(--warning-bg)', color: 'var(--warning)', fontWeight: 700, flexShrink: 0 }}>
+                    {t('reserva.camps.alergies')}
+                  </span>
+                )}
+                {minuts <= 15 && (
+                  <span className="badge badge-pending" style={{ border: '1px solid var(--border)', flexShrink: 0 }}>
+                    {t('avui.ara.enMin').replace('{min}', String(minuts))}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+
+          <div className="today-now-foot">
+            <a href={`/agenda?vista=gantt&data=${selectedDate}`}>{t('avui.ara.veureTotes')}</a>
+          </div>
+        </div>
+      )}
+
+      {/* ── CAL MIRAR: només quan hi ha alguna cosa a fer ── */}
+      {avisos.length > 0 && (
+        <div className="card today-notifications">
+          {avisos.map((aviso, i) => (
+            <div key={i} className="today-notification-row">
+              {aviso.key === 'senseHoraris' && (
+                <>
+                  <span>
+                    {t('avui.avisos.senseHorarisA')} {formatNextMonday(aviso.nextMonday)} {t('avui.avisos.senseHorarisB')}
+                  </span>
+                  <a href={`/equip?setmana=${aviso.nextMonday}`}>{t('avui.avisos.anarEquip')}</a>
+                </>
+              )}
+              {aviso.key === 'senseTaula' && (
+                <>
+                  <span>
+                    {aviso.count} {aviso.count === 1 ? t('avui.avisos.senseTaula1') : t('avui.avisos.senseTaula')}
+                  </span>
+                  <a href={`/reserva/${aviso.firstId}`}>{t('avui.avisos.assignar')}</a>
+                </>
+              )}
+              {aviso.key === 'standby' && (
+                <>
+                  <span>
+                    {aviso.count === 1
+                      ? <><strong>{aviso.firstName}</strong> {t('avui.avisos.standbyEspera')}</>
+                      : <>{aviso.count} {t('avui.avisos.standbyN')}</>
+                    }
+                  </span>
+                  <a href={`/reserva/${aviso.firstId}`}>{t('avui.avisos.anarReserva')}</a>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ── ZONA 2: Dues columnes ── */}
+      <div className="today-day-label">
+        <span>{t('avui.elDia')}</span>
+        <div />
+      </div>
+
       <div className="today-grid">
 
         {/* Columna esquerra: gràfic + properes reserves */}
@@ -204,31 +302,6 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
             <div className="today-empty">
               <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>Cap reserva per aquest dia.</p>
               <a href={`/reserva/nova?data=${selectedDate}`} className="btn btn-primary"><Plus size={16} />{t('reserva.nova')}</a>
-            </div>
-          )}
-
-          {upcoming.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                {t('avui.properes')}
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {upcoming.map(r => (
-                  <div
-                    key={r.id}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
-                    onClick={() => router.push(`/reserva/${r.id}`)}
-                  >
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', width: 40, flexShrink: 0 }}>{r.time}</span>
-                    <span style={{ fontSize: 13, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.customer_name}</span>
-                    {r.allergies.length > 0 && (
-                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning)', flexShrink: 0 }}>{t('reserva.camps.alergies')}</span>
-                    )}
-                    <span style={{ fontSize: 13, color: 'var(--text-muted)', flexShrink: 0 }}>×{r.party_size}</span>
-                    {r.table_number && <span style={{ fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 }}>{r.table_number}</span>}
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 
@@ -287,77 +360,6 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
             </div>
           )}
         </div>
-      </div>
-
-      {/* ── ZONA 3: Notificacions (toggle) ── */}
-      <div className="card today-notifications">
-        <button
-          className="today-notification-toggle"
-          aria-expanded={showNotif}
-          onClick={() => setShowNotif(v => !v)}
-        >
-          <span style={{ fontWeight: 600 }}>
-            {t('avui.notificacions.titol')}
-            {avisos.length > 0 && (
-              <span className="today-notification-count">
-                {avisos.length}
-              </span>
-            )}
-          </span>
-          <span aria-hidden="true">{showNotif ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</span>
-        </button>
-        {showNotif && (
-          <div style={{ borderTop: '1px solid var(--border)' }}>
-            {avisos.length === 0 ? (
-              <p style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-muted)' }}>
-                {t('avui.notificacions.cap')}
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {avisos.map((aviso, i) => (
-                  <div
-                    key={i}
-                    className="today-notification-row"
-                  >
-                    {aviso.key === 'senseHoraris' && (
-                      <>
-                        <span style={{ fontSize: 13, color: 'var(--text)' }}>
-                          {t('avui.avisos.senseHorarisA')} {formatNextMonday(aviso.nextMonday)} {t('avui.avisos.senseHorarisB')}
-                        </span>
-                        <a href={`/equip?setmana=${aviso.nextMonday}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                          {t('avui.avisos.anarEquip')}
-                        </a>
-                      </>
-                    )}
-                    {aviso.key === 'senseTaula' && (
-                      <>
-                        <span style={{ fontSize: 13, color: 'var(--text)' }}>
-                          {aviso.count} {aviso.count === 1 ? t('avui.avisos.senseTaula1') : t('avui.avisos.senseTaula')}
-                        </span>
-                        <a href={`/reserva/${aviso.firstId}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                          {t('avui.avisos.anarReserva')}
-                        </a>
-                      </>
-                    )}
-                    {aviso.key === 'standby' && (
-                      <>
-                        <span style={{ fontSize: 13, color: 'var(--text)' }}>
-                          {aviso.count === 1
-                            ? <><strong>{aviso.firstName}</strong> {t('avui.avisos.standbyEspera')}</>
-                            : <>{aviso.count} {t('avui.avisos.standbyN')}</>
-                          }
-                        </span>
-                        <a href={`/reserva/${aviso.firstId}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                          {t('avui.avisos.anarReserva')}
-                        </a>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* ── Bottom sheet calendari (mòbil) ── */}
