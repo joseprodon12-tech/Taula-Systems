@@ -196,7 +196,8 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
                     {r.table_number ? `${t('avui.ara.taula')} ${r.table_number}` : t('avui.ara.senseTaula')}
                   </div>
                 </div>
-                {r.allergies.length > 0 && (
+                {/* Els comentaris tant poden venir del formulari públic com de les notes del panell */}
+                {(r.allergies.length > 0 || !!r.notes) && (
                   <span className="badge" style={{ background: 'var(--warning-bg)', color: 'var(--warning)', fontWeight: 700, flexShrink: 0 }}>
                     {t('reserva.camps.alergies')}
                   </span>

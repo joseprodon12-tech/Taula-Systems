@@ -105,21 +105,27 @@ async function isClosedDay({ supabase, restaurant }: Auth, date: string): Promis
   return !!closure || getAvailableSlots(restaurant.weekly_hours, date).length === 0
 }
 
+// El formulari només ofereix hores obertes, però el connector MCP no hi passa: la regla viu aquí
+function isClosedTime({ restaurant }: Auth, date: string, time: string): boolean {
+  const slots = getAvailableSlots(restaurant.weekly_hours, date)
+  return slots.length > 0 && !slots.includes(time)
+}
+
 // La zona la mana la taula: si no coincideixen, el detall diu Terrassa i la graella la pinta a Sala
 async function resolveTableSection(
   { supabase, restaurant }: Auth,
   tableNumber: string,
   section: 'indoor' | 'outdoor',
-): Promise<{ section: 'indoor' | 'outdoor' } | SaveError> {
+): Promise<{ section: 'indoor' | 'outdoor'; capacity: number } | SaveError> {
   const { data: tables, error } = await supabase
     .from('tables')
-    .select('number, section')
+    .select('number, section, capacity')
     .eq('restaurant_id', restaurant.id)
   if (error) return { error: 'Error en comprovar la taula' }
   // Sense taules configurades, el número de taula és text lliure
-  if (tables.length === 0) return { section }
+  if (tables.length === 0) return { section, capacity: 0 }
 
-  const sameNumber = (tables as { number: string; section: 'indoor' | 'outdoor' }[])
+  const sameNumber = (tables as { number: string; section: 'indoor' | 'outdoor'; capacity: number }[])
     .filter(t => t.number === tableNumber)
   if (sameNumber.length === 0) {
     const message = `La taula ${tableNumber} no existeix. Tria una taula de la llista.`
@@ -130,7 +136,7 @@ async function resolveTableSection(
     const message = `Hi ha més d'una taula amb el número ${tableNumber}. Canvia'n el número a Configuració.`
     return { error: message, fieldErrors: { table_number: message } }
   }
-  return { section: matches[0].section }
+  return { section: matches[0].section, capacity: matches[0].capacity }
 }
 
 async function findTableConflict(
@@ -189,6 +195,10 @@ export async function createReservation(data: {
   if (await isClosedDay(auth, data.date)) {
     return { error: 'El restaurant és tancat aquest dia', fieldErrors: { date: 'Dia tancat' } }
   }
+  if (isClosedTime(auth, data.date, data.time)) {
+    const message = `A les ${data.time} el restaurant és tancat. Tria una hora de servei.`
+    return { error: message, fieldErrors: { time: message } }
+  }
 
   const hour = parseInt(data.time.split(':')[0])
   const isLunch = hour >= 12 && hour < 17
@@ -197,10 +207,14 @@ export async function createReservation(data: {
 
   const tableNumber = data.table_number?.trim() || null
   let section = data.section
+  let tableWarning: string | undefined
   if (tableNumber) {
     const resolved = await resolveTableSection(auth, tableNumber, data.section)
     if ('error' in resolved) return resolved
     section = resolved.section
+    if (resolved.capacity > 0 && data.party_size > resolved.capacity) {
+      tableWarning = `⚠️ La taula ${tableNumber} té ${resolved.capacity} places i el grup és de ${data.party_size} — reserva guardada igualment`
+    }
     const conflict = await findTableConflict(auth, { date: data.date, time: data.time, duration, tableNumber })
     if (conflict) return conflict
   }
@@ -228,9 +242,10 @@ export async function createReservation(data: {
   const total = occupiedPax + data.party_size
   const sectionLabel = section === 'indoor' ? 'El menjador' : 'La terrassa'
   const serviceLabel = isLunch ? 'al dinar' : 'al sopar'
-  const warning = capacity > 0 && total > capacity
-    ? `⚠️ ${sectionLabel} ${serviceLabel}: ${total}/${capacity} places — reserva guardada igualment`
-    : undefined
+  const warning = tableWarning
+    ?? (capacity > 0 && total > capacity
+      ? `⚠️ ${sectionLabel} ${serviceLabel}: ${total}/${capacity} places — reserva guardada igualment`
+      : undefined)
 
   const { data: newRes, error } = await supabase.from('reservations').insert({
     restaurant_id: restaurant.id,
@@ -289,6 +304,10 @@ export async function updateReservation(
   // Si el dia s'ha tancat després de reservar, s'ha de poder seguir editant el telèfon o les notes
   if (data.date !== current.date && await isClosedDay(auth, data.date)) {
     return { error: 'El restaurant és tancat aquest dia', fieldErrors: { date: 'Dia tancat' } }
+  }
+  if ((data.date !== current.date || data.time !== current.time) && isClosedTime(auth, data.date, data.time)) {
+    const message = `A les ${data.time} el restaurant és tancat. Tria una hora de servei.`
+    return { error: message, fieldErrors: { time: message } }
   }
 
   const duration = data.duration_minutes ?? current.duration_minutes
