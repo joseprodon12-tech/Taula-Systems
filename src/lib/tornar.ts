@@ -11,6 +11,7 @@ export function returnView(date: string, fallback: string): string {
   const url = new URL(saved, window.location.origin)
   url.searchParams.delete('avis')
   url.searchParams.delete('seccio')
+  url.searchParams.delete('servei')
   url.searchParams.set('data', date)
   return url.pathname + url.search
 }

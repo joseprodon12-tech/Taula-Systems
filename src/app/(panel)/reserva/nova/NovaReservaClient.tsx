@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CalendarDays, UserRound, Armchair } from 'lucide-react'
 import { Toast, useToast } from '@/components/ui/Toast'
@@ -137,6 +137,11 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialDa
   }
 
   const [savedWarning, setSavedWarning] = useState<{ text: string; back: string } | null>(null)
+  const warningRef = useRef<HTMLDivElement>(null)
+  // L'avís surt al final del formulari: si no el portem a la vista, queda sota la barra de navegació
+  useEffect(() => {
+    if (savedWarning) warningRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [savedWarning])
 
   function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
@@ -618,6 +623,7 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialDa
         {/* La reserva ja és desada: l'avís del servidor es llegeix abans de marxar */}
         {savedWarning && (
           <div
+            ref={warningRef}
             role="status"
             style={{
               marginTop: 16, marginBottom: 24, padding: '14px 16px',
