@@ -136,6 +136,8 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialDa
     setSection(table.section)
   }
 
+  const [savedWarning, setSavedWarning] = useState<{ text: string; back: string } | null>(null)
+
   function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
     setErrors({})
@@ -172,10 +174,9 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialDa
         }
         // Torna a la pantalla on es treballava (Avui, Gantt, Llista o Setmana), al dia de la reserva
         const back = returnView(data.date, `/agenda?data=${data.date}`)
-        router.push(result.warning
-          ? (back.startsWith('/agenda') ? back : `/agenda?data=${data.date}`)
-            + `&avis=capacitat&seccio=${data.section}&servei=${parseInt(data.time) < 17 ? 'dinar' : 'sopar'}`
-          : back)
+        // L'avís el diu el servidor amb el seu text: ensenyar-lo aquí, abans de marxar
+        if (result.warning) { setSavedWarning({ text: result.warning, back }); return }
+        router.push(back)
       }
     })
   }
@@ -613,6 +614,28 @@ export default function NovaReservaClient({ initialDate, initialSlots, initialDa
         >
           {pending ? 'Guardant...' : t('reserva.guardar')}
         </button>
+
+        {/* La reserva ja és desada: l'avís del servidor es llegeix abans de marxar */}
+        {savedWarning && (
+          <div
+            role="status"
+            style={{
+              marginTop: 16, marginBottom: 24, padding: '14px 16px',
+              borderLeft: '3px solid var(--warning)', borderRadius: '0 8px 8px 0',
+              background: 'var(--warning-bg)', color: 'var(--text)',
+            }}
+          >
+            <p style={{ fontWeight: 600, marginBottom: 4 }}>{t('reserva.desadaAmbAvis')}</p>
+            <p style={{ fontSize: 14, marginBottom: 12 }}>{savedWarning.text}</p>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => router.push(savedWarning.back)}
+            >
+              {t('reserva.continuar')}
+            </button>
+          </div>
+        )}
       </form>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hide} />}

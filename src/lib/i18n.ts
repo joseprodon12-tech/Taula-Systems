@@ -57,6 +57,8 @@ const ca = {
       vegetaria:   'Vegetarià',
       vega:        'Vegà',
     },
+    desadaAmbAvis: 'Reserva desada',
+    continuar:     'Continuar',
     horaDesada: {
       foraHorari: "Hora desada fora de l'horari actual. Es mantindrà si no en tries una altra.",
       triarAltra: 'Tria una altra hora',
@@ -390,6 +392,8 @@ const es: DeepString<typeof ca> = {
       vegetaria:   'Vegetariano',
       vega:        'Vegano',
     },
+    desadaAmbAvis: 'Reserva guardada',
+    continuar:     'Continuar',
     horaDesada: {
       foraHorari: 'Hora guardada fuera del horario actual. Se mantendrá si no eliges otra.',
       triarAltra: 'Elige otra hora',
