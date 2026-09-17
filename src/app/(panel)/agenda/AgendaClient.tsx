@@ -55,7 +55,18 @@ export default function AgendaClient({
   const [showCalendar, setShowCalendar] = useState(false)
   const [warningDismissed, setWarningDismissed] = useState(false)
 
+  const [scrolled, setScrolled] = useState(false)
+
   useEffect(() => { rememberReturnView() }, [vista, selectedDate])
+
+  // En baixar, la capçalera es queda només amb el dia i les fletxes
+  useEffect(() => {
+    const main = document.querySelector('main.panel-content')
+    if (!main) return
+    function onScroll() { setScrolled(main!.scrollTop > 40) }
+    main.addEventListener('scroll', onScroll, { passive: true })
+    return () => main.removeEventListener('scroll', onScroll)
+  }, [])
 
   // L'avís arriba per URL: el formulari navega aquí just després de desar i un toast allà es perdria
   const capacityMessage = (() => {
@@ -125,7 +136,7 @@ export default function AgendaClient({
   }
 
   return (
-    <div className="agenda-page flex gap-6">
+    <div className={`agenda-page flex gap-6${scrolled ? ' is-scrolled' : ''}`}>
     <div className="flex-1 min-w-0">
       {/* ── Capçalera ── */}
       <div className="agenda-header">

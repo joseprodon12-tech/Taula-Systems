@@ -149,7 +149,7 @@ const ca = {
     setmanaAnterior: 'Setmana anterior',
     setmanaSeguent:  'Setmana següent',
     vistes: {
-      gantt:   'Gantt',
+      gantt:   'Taules',
       llista:  'Llista',
       setmana: 'Setmana',
     },
@@ -236,6 +236,8 @@ const ca = {
     taulaBuida:  'Taula lliure',
     senseTaules: 'No hi ha taules configurades.',
     configLink:  'Afegeix-les a la configuració',
+    ocupada:     'La taula {taula} ja té {nom} de {inici} a {fi}',
+    foraHorari:  'Aquí no hi ha servei — deixa la reserva dins d’un horari obert',
   },
   config: {
     titol:  'Configuració',
@@ -467,7 +469,7 @@ const es: DeepString<typeof ca> = {
     setmanaAnterior: 'Semana anterior',
     setmanaSeguent:  'Semana siguiente',
     vistes: {
-      gantt:   'Gantt',
+      gantt:   'Mesas',
       llista:  'Lista',
       setmana: 'Semana',
     },
@@ -554,6 +556,8 @@ const es: DeepString<typeof ca> = {
     taulaBuida:  'Mesa libre',
     senseTaules: 'No hay mesas configuradas.',
     configLink:  'Añádelas en la configuración',
+    ocupada:     'La mesa {taula} ya tiene a {nom} de {inici} a {fi}',
+    foraHorari:  'Aquí no hay servicio — deja la reserva dentro de un horario abierto',
   },
   config: {
     titol:  'Configuración',

@@ -24,6 +24,11 @@
   --warning-bg:     #FEF3C7;
   --grid-line:      #CDD2CE;
 
+  /* Marc de la graella de taules: ha de destacar sobre el fons de la pàgina */
+  --gantt-frame:        #F1EFE9;
+  --gantt-frame-border: #B9BFBA;
+  --gantt-hours-bg:     #FFFFFF;
+
   /* Punts 1 i 4 del brief EQUIP-DISSENY-V1: cel·les hover + chips esborrany */
   --draft-bg:       color-mix(in srgb, var(--primary) 12%, transparent);
 }
@@ -160,7 +165,8 @@ main > * { animation: page-in 0.18s ease both; }
   outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
-.panel-content { padding: 24px 16px 104px; }
+.panel-content { padding: 24px 16px calc(80px + env(safe-area-inset-bottom)); }
+@media (min-width: 1280px) { .panel-content { padding-bottom: 24px; } }
 .panel-brand { font-size: 24px; font-weight: 750; letter-spacing: -1px; color: var(--text); white-space: nowrap; }
 .panel-brand span { color: var(--primary); }
 .panel-nav-link { min-height: 44px; }
@@ -269,6 +275,7 @@ main > * { animation: page-in 0.18s ease both; }
 .agenda-view[aria-pressed="true"] { color: var(--primary); background: var(--bg); border-color: var(--border); box-shadow: 0 1px 3px rgb(36 42 43 / 5%); font-weight: 650; }
 .agenda-sidebar > .card { padding: 16px; }
 .agenda-gantt { display: flex; flex-direction: column; gap: 10px; }
+.gantt-grid { background: var(--gantt-frame); border: 1.5px solid var(--gantt-frame-border); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgb(36 42 43 / 8%); }
 .gantt-toolbar { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
 .gantt-scroll { overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: #B9BFBA var(--surface); }
 .agenda-list, .agenda-week { max-width: 840px; }
@@ -288,13 +295,26 @@ main > * { animation: page-in 0.18s ease both; }
 .agenda-week-reservation { display: flex; align-items: center; gap: 10px; padding: 16px; min-height: 56px; cursor: pointer; }
 .agenda-week-reservation:hover { background: var(--surface); }
 @media (max-width: 599px) {
-  .agenda-header { grid-template-columns: minmax(0, 1fr) auto; gap: 12px 8px; margin-bottom: 16px; }
-  .agenda-heading { grid-column: 1 / -1; }
-  .agenda-heading h1 { font-size: 26px; }
-  .agenda-date-controls { grid-column: 1; grid-row: 2; }
-  .agenda-calendar-button { grid-column: 2; grid-row: 2; }
-  .agenda-views { grid-row: 3; width: 100%; }
-  .agenda-view { flex: 1; min-width: 0; padding-inline: 10px; }
+  /* Una sola fila per al dia i una per a les vistes: la graella comença 156 px més amunt */
+  .agenda-header {
+    grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; margin-bottom: 10px;
+    position: sticky; top: -24px; z-index: 20;
+    background: var(--surface); padding-block: 6px;
+  }
+  .agenda-heading { grid-column: 1; grid-row: 1; }
+  .agenda-heading h1 { display: none; }
+  .agenda-heading p { margin-top: 0; font-size: 15px; font-weight: 650; color: var(--text); }
+  .agenda-date-controls { grid-column: 2; grid-row: 1; }
+  .agenda-calendar-button { grid-column: 3; grid-row: 1; }
+  .agenda-views { grid-column: 1 / 3; grid-row: 2; width: auto; padding: 3px; }
+  .agenda-view { flex: 0 1 auto; min-width: 0; min-height: 40px; padding-inline: 12px; }
+  /* El zoom comparteix fila amb les vistes */
+  .agenda-gantt { position: relative; }
+  .agenda-gantt .gantt-toolbar { position: absolute; right: 0; top: -58px; height: 44px; }
+  .gantt-toolbar button { width: 36px !important; height: 36px !important; }
+  /* En baixar només queden el dia i les fletxes */
+  .agenda-page.is-scrolled .agenda-views,
+  .agenda-page.is-scrolled .gantt-toolbar { display: none; }
   .agenda-list .card { padding: 16px; }
   .agenda-week-reservation { gap: 8px; padding: 14px 12px; }
 }

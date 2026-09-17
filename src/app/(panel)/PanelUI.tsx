@@ -173,7 +173,7 @@ export default function PanelUI({ children, role }: { children: ReactNode; role:
           onClick={() => setShowSheet(true)}
           className="xl:hidden fixed z-40 flex items-center justify-center shadow-lg"
           style={{
-            bottom: 80, right: 16,
+            bottom: 80, left: 16,
             width: 56, height: 56,
             borderRadius: '50%',
             background: 'var(--primary)',

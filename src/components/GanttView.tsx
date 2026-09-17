@@ -17,10 +17,10 @@ const ZOOM_STEP      = 0.25
 function ganttDimensions(tableCount: number): {
   rowH: number; slotPx: number; tableColW: number; tableColWMobile: number
 } {
-  if (tableCount <= 10) return { rowH: 72, slotPx: 44, tableColW: 96, tableColWMobile: 64 }
-  if (tableCount <= 20) return { rowH: 56, slotPx: 36, tableColW: 84, tableColWMobile: 56 }
-  if (tableCount <= 30) return { rowH: 44, slotPx: 32, tableColW: 76, tableColWMobile: 52 }
-  return                       { rowH: 36, slotPx: 28, tableColW: 68, tableColWMobile: 48 }
+  if (tableCount <= 10) return { rowH: 72, slotPx: 44, tableColW: 96, tableColWMobile: 40 }
+  if (tableCount <= 20) return { rowH: 56, slotPx: 36, tableColW: 84, tableColWMobile: 40 }
+  if (tableCount <= 30) return { rowH: 44, slotPx: 32, tableColW: 76, tableColWMobile: 38 }
+  return                       { rowH: 36, slotPx: 28, tableColW: 68, tableColWMobile: 36 }
 }
 
 // ── Time helpers ───────────────────────────────────────────────────────────────
@@ -179,7 +179,7 @@ export default function GanttView({
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
-  const [ghost, setGhost] = useState<{ tableId: string; time: string; reservationId: string } | null>(null)
+  const [ghost, setGhost] = useState<{ tableId: string; time: string; reservationId: string; blocked: boolean } | null>(null)
 
   const [tableColW, setTableColW] = useState(TABLE_COL_W)
   useEffect(() => {
@@ -320,6 +320,15 @@ export default function GanttView({
     }
   }
 
+  function conflictAt(tableId: string, time: string, r: Reservation): Reservation | undefined {
+    const rStart = toMin(time), rEnd = rStart + r.duration_minutes
+    return (byTable.get(tableId) ?? []).find(e => {
+      if (e.id === r.id) return false
+      const eStart = toMin(e.time), eEnd = eStart + e.duration_minutes
+      return rStart < eEnd && rEnd > eStart
+    })
+  }
+
   function getDropPos(clientX: number, clientY: number) {
     const container = containerRef.current
     if (!container) return null
@@ -347,7 +356,7 @@ export default function GanttView({
         if (containerRef.current) containerRef.current.style.touchAction = 'none'
       }
       const pos = getDropPos(ev.clientX, ev.clientY)
-      if (pos) setGhost({ ...pos, reservationId: r.id })
+      if (pos) setGhost({ ...pos, reservationId: r.id, blocked: !!conflictAt(pos.tableId, pos.time, r) })
     }
 
     function onUp(ev: PointerEvent) {
@@ -361,19 +370,21 @@ export default function GanttView({
       if (!active) { onReservationClick(r.id); return }
 
       const pos = getDropPos(ev.clientX, ev.clientY)
-      if (!pos || (pos.time === r.time && pos.tableId === tableId)) return
-
-      const targetRows = byTable.get(pos.tableId) ?? []
-      const rStart = toMin(pos.time), rEnd = rStart + r.duration_minutes
-      const conflict = targetRows.some(e => {
-        if (e.id === r.id) return false
-        const eStart = toMin(e.time), eEnd = eStart + e.duration_minutes
-        return rStart < eEnd && rEnd > eStart
-      })
-      if (conflict) return
+      if (!pos) { onWarning?.(t('gantt.foraHorari')); return }
+      if (pos.time === r.time && pos.tableId === tableId) return
 
       const targetTable = tables.find(tbl => tbl.id === pos.tableId)
-      if (!targetTable) return
+      if (!targetTable) { onWarning?.(t('gantt.foraHorari')); return }
+
+      const conflict = conflictAt(pos.tableId, pos.time, r)
+      if (conflict) {
+        onWarning?.(t('gantt.ocupada')
+          .replace('{taula}', targetTable.number)
+          .replace('{nom}', conflict.customer_name)
+          .replace('{inici}', conflict.time)
+          .replace('{fi}', toTime(toMin(conflict.time) + conflict.duration_minutes)))
+        return
+      }
 
       if (targetTable.capacity > 0 && r.party_size > targetTable.capacity) {
         onWarning?.(`⚠️ La taula ${targetTable.number} té capacitat per ${targetTable.capacity}p — el grup és de ${r.party_size}p`)
@@ -436,7 +447,7 @@ export default function GanttView({
       </div>
 
       {/* Gantt grid */}
-      <div className="gantt-grid" style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+      <div className="gantt-grid" style={{ display: 'flex' }}>
 
         {/* ── LEFT COLUMN: table labels, always visible ── */}
         <div style={{
@@ -447,8 +458,8 @@ export default function GanttView({
         }}>
           <div style={{
             height: HEADER_H_Z,
-            background: 'var(--surface)',
-            borderBottom: '2px solid var(--border)',
+            background: 'var(--gantt-hours-bg)',
+            borderBottom: '1.5px solid var(--gantt-frame-border)',
           }} />
 
           {groupMetas.map((gm) => (
@@ -493,8 +504,15 @@ export default function GanttView({
           {/* Header: hour labels */}
           <div style={{
             position: 'relative', width: contentW, height: HEADER_H_Z,
-            background: 'var(--surface)', borderBottom: '2px solid var(--border)',
+            background: 'var(--gantt-hours-bg)', borderBottom: '1.5px solid var(--gantt-frame-border)',
           }}>
+            {/* Punt de la mitja hora: referència visual entre hora i hora */}
+            {quarterMarkers.filter(q => q.isHalf).map(q => (
+              <span key={`h${q.x}`} style={{
+                position: 'absolute', left: q.x - 2, top: '50%', marginTop: -2,
+                width: 4, height: 4, borderRadius: '50%', background: 'var(--text)',
+              }} />
+            ))}
             {hourMarkers.map(m => (
               <span key={m.x} style={{
                 position: 'absolute', left: m.x, top: '50%',
@@ -534,7 +552,8 @@ export default function GanttView({
                     ghostEl = (
                       <div key="ghost" style={{
                         position: 'absolute', left: gx + 2, top: barPad, width: gw, height: ROW_H_Z - barPad * 2,
-                        border: `2px dashed ${blockBg(ghostRes)}`,
+                        border: `2px dashed ${ghost.blocked ? 'var(--state-noshow)' : blockBg(ghostRes)}`,
+                        background: ghost.blocked ? 'rgba(153,27,27,0.12)' : undefined,
                         borderRadius: 6, pointerEvents: 'none', boxSizing: 'border-box', zIndex: 4,
                       }} />
                     )
