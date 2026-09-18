@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache'
 import { getAvailableSlots } from '@/lib/schedule'
 import { getAuthRestaurant } from '@/lib/auth'
-import { todayISO } from '@/lib/dates'
 import type { Reservation } from '@/db/schema'
 
 export async function getReservationsForDay(date: string): Promise<Reservation[]> {

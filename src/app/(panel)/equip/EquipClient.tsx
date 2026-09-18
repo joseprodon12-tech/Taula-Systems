@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, useCallback, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight, AlertTriangle, Plus, Users, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, AlertTriangle, Users, CalendarDays } from 'lucide-react'
 import { useT } from '@/context/LocaleContext'
 import { addDays, getMondayISO } from '@/lib/dates'
 import { weeklyMinutes, validateWeek } from '@/lib/labor'
@@ -79,6 +79,8 @@ export default function EquipClient({
   } | null>(null)
   const [dragTarget, setDragTarget] = useState<{ date: string; empId: string } | null>(null)
   const ghostRef = useRef<HTMLDivElement | null>(null)
+  // Ha de ser estat, no referència: el xip que s'arrossega s'apaga i això s'ha de repintar
+  const [draggingShiftId, setDraggingShiftId] = useState<string | null>(null)
 
   const [showCalendar, setShowCalendar] = useState(false)
 
@@ -363,6 +365,7 @@ export default function EquipClient({
     const dx = e.clientX - dr.startX
     const dy = e.clientY - dr.startY
     if (!dr.active && Math.sqrt(dx * dx + dy * dy) < 6) return
+    if (!dr.active) setDraggingShiftId(dr.shiftId)
     dr.active = true
 
     // Move ghost
@@ -387,6 +390,7 @@ export default function EquipClient({
   const handleShiftPointerUp = useCallback((e: React.PointerEvent, shift: Shift) => {
     const dr = dragRef.current
     dragRef.current = null
+    setDraggingShiftId(null)
     if (ghostRef.current) ghostRef.current.style.display = 'none'
 
     if (!dr?.active) {
@@ -450,10 +454,6 @@ export default function EquipClient({
 
   function isOverlap(empId: string, date: string): boolean {
     return warnings.some(w => w.employeeId === empId && w.date === date && w.key === 'overlap')
-  }
-
-  function hasWeeklyWarning(empId: string): boolean {
-    return warnings.some(w => w.employeeId === empId && !w.date)
   }
 
   // ── Render helpers ──────────────────────────────────────────────────────────
@@ -664,7 +664,7 @@ export default function EquipClient({
                             <ShiftChip
                               key={s.id}
                               shift={s}
-                              isDropTarget={dragRef.current?.shiftId === s.id && dragRef.current?.active}
+                              isDropTarget={draggingShiftId === s.id}
                               warn={dayWarn}
                               overlap={isOverlap(emp.id, day.iso)}
                               warnTitle={warnings.filter(w => w.employeeId === emp.id && w.date === day.iso).map(w => warningTitle(w.key)).join('\n')}

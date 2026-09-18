@@ -108,7 +108,7 @@ export default function AvuiClient({ reserves, shiftsToday, hourlyData, avisos, 
       .filter(r => toMin(r.time) > now)
       .sort((a, b) => a.time.localeCompare(b.time))
       .slice(0, 3)
-  }, [active]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active])
 
   // Qui seu ara: la reserva ocupa la taula des de l'hora fins que s'acaba la durada
   const seatedPax = isToday
