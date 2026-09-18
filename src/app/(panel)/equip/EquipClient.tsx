@@ -189,10 +189,11 @@ export default function EquipClient({
 
   // ── Action helpers ──────────────────────────────────────────────────────────
 
-  function handleOpenEditor(employeeId: string, date: string, shift?: Shift) {
+  // Memoritzada perquè handleShiftPointerUp en depèn: si es refés a cada dibuix, aquell useCallback no serviria de res
+  const handleOpenEditor = useCallback((employeeId: string, date: string, shift?: Shift) => {
     if (role !== 'owner') return
     setEditor({ mode: shift ? 'edit' : 'new', employeeId, date, shift })
-  }
+  }, [role])
 
   function handleSaveShift(data: ShiftFormData) {
     if (editor?.mode === 'new') {

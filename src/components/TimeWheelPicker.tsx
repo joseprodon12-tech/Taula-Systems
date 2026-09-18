@@ -69,6 +69,9 @@ export default function TimeWheelPicker({ lunchSlots, dinnerSlots, selected, onS
       ? items.findIndex(it => it.kind === 'slot' && it.value === selected)
       : firstSlotIdx(items)
     if (idx >= 0) go(idx, false)
+    // 'selected' queda fora expressament: la roda es col·loca quan canvien les hores, no cada cop que en tries una,
+    // o es recol·locaria sola mentre la fas girar amb el dit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items])
 
   const handleScroll = useCallback(() => {

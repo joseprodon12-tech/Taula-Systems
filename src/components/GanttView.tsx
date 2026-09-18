@@ -187,7 +187,7 @@ export default function GanttView({
     update()
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
-  }, [])
+  }, [TABLE_COL_W, TABLE_COL_W_MOBILE])
 
   const [nowTime, setNowTime] = useState(currentTimeStr)
   useEffect(() => {
